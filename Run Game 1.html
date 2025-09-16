@@ -1,0 +1,2620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Exposure Game</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Auth Screen Styles */
+.auth-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.auth-container {
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.auth-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 8px;
+}
+
+.auth-subtitle {
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.auth-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.auth-label {
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.auth-input {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.auth-input:focus {
+    outline: none;
+    border-color: #00d4ff;
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.2);
+    background: rgba(255,255,255,0.15);
+}
+
+.auth-input::placeholder {
+    color: rgba(255,255,255,0.5);
+}
+
+.auth-button {
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 10px;
+}
+
+.auth-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,212,255,0.4);
+}
+
+.auth-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.auth-toggle {
+    text-align: center;
+    margin-top: 20px;
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+}
+
+.auth-link {
+    color: #00d4ff;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+}
+
+.auth-error {
+    background: rgba(244,67,54,0.2);
+    border: 1px solid rgba(244,67,54,0.4);
+    color: #ff6b6b;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.auth-success {
+    background: rgba(76,175,80,0.2);
+    border: 1px solid rgba(76,175,80,0.4);
+    color: #81c784;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 0.8s ease-in-out infinite;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.guest-option {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+.guest-button {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.guest-button:hover {
+    background: rgba(255,255,255,0.15);
+    color: white;
+}
+
+.logout-btn {
+    background: rgba(244,67,54,0.2);
+    border: 1px solid rgba(244,67,54,0.4);
+    color: #ff6b6b;
+}
+
+.logout-btn:hover {
+    background: rgba(244,67,54,0.3);
+}
+        /* Menu Screen Styles */
+        .menu-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    z-index: 500;
+    overflow-y: auto;
+    display: none;
+}
+        
+        .career-level {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.career-level.unlocked {
+    background: rgba(76,175,80,0.2);
+    border-color: rgba(76,175,80,0.4);
+}
+
+.career-level.current {
+    background: linear-gradient(135deg, rgba(255,193,7,0.3), rgba(255,152,0,0.3));
+    border-color: rgba(255,193,7,0.6);
+    box-shadow: 0 0 20px rgba(255,193,7,0.2);
+}
+
+.career-level.locked {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.1);
+    opacity: 0.6;
+}
+
+@keyframes current-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+        
+        .background-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(255,255,255,0.08) 1px, transparent 1px),
+                radial-gradient(circle at 75% 75%, rgba(255,255,255,0.04) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 1;
+        }
+        
+        .menu-content {
+            position: relative;
+            z-index: 2;
+            padding: 40px 20px 20px;
+            max-width: 400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        .hero-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .app-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border-radius: 20px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: 0 8px 24px rgba(0,212,255,0.2);
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .app-title {
+            font-size: 32px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .app-tagline {
+            font-size: 16px;
+            color: rgba(255,255,255,0.8);
+            font-weight: 400;
+        }
+        
+        .floating-card {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.15);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        
+        .menu-user-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .menu-user-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+        }
+        
+        .menu-level-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .menu-level-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(255,152,0,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        .menu-progress-info {
+            flex: 1;
+            max-width: 140px;
+        }
+        
+        .menu-progress-bar {
+            background: rgba(255,255,255,0.2);
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        
+        .menu-progress-fill {
+            background: linear-gradient(90deg, #00ff00, #32ff32);
+            height: 100%;
+            border-radius: 3px;
+            box-shadow: 0 0 8px rgba(0,255,0,0.3);
+            transition: width 0.5s ease;
+        }
+        
+        .menu-progress-text {
+            font-size: 11px;
+            color: rgba(255,255,255,0.8);
+        }
+        
+        .menu-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .menu-stat-card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .menu-stat-number {
+            font-size: 20px;
+            font-weight: 700;
+            color: #00ff00;
+            margin-bottom: 4px;
+        }
+        
+        .menu-stat-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .menu-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .menu-difficulty-pills {
+            display: flex;
+            gap: 8px;
+            padding: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+        }
+        
+        .menu-difficulty-pill {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .menu-difficulty-pill.active {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+            box-shadow: 0 2px 8px rgba(33,150,243,0.3);
+        }
+        
+        .menu-main-actions {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .menu-action-btn {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+            border: none;
+            padding: 18px 24px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px rgba(0,212,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .menu-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,212,255,0.4);
+        }
+        
+        .menu-secondary-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .menu-secondary-btn {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .menu-secondary-btn:hover {
+            background: rgba(255,255,255,0.12);
+            transform: translateY(-1px);
+        }
+        
+        .menu-version-info {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+        }
+        
+        /* Game Screen Styles */
+        .game-screen {
+            display: none;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .user-profile {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.4);
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .profile-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .username-display {
+            color: #00ff00;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .level-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .level-badge {
+            background: linear-gradient(145deg, #ff9800, #f57c00);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        .coins-display {
+            background: linear-gradient(135deg, #ffd700, #ffb300);
+            color: #000;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.3);
+            margin-left: 10px;
+        }
+        
+        .xp-bar-container {
+            width: 100px;
+            height: 6px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .xp-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #32ff32);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 8px rgba(0,255,0,0.3);
+        }
+        
+        .xp-text {
+            color: #ffffff;
+            font-size: 10px;
+        }
+        
+        .profile-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .profile-btn {
+            background: #673AB7;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+            transition: all 0.2s ease;
+        }
+        
+        .profile-btn:hover {
+            background: #5E35B1;
+            transform: translateY(-1px);
+        }
+        
+        .asset-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .tab-button {
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            position: relative;
+            font-size: 11px;
+        }
+        
+        .tab-button:hover {
+            background: rgba(255,255,255,0.1);
+            transform: translateY(-1px);
+        }
+        
+        .tab-button.active {
+            background: linear-gradient(145deg, #2196F3, #1976D2);
+            border-color: rgba(255,255,255,0.4);
+            box-shadow: 0 3px 8px rgba(33,150,243,0.3);
+        }
+        
+        .tab-button.powerups {
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            border-radius: 12px;
+            margin-left: 15px;
+            border: 2px solid rgba(156,39,176,0.3);
+            box-shadow: 0 3px 12px rgba(156,39,176,0.2);
+        }
+        
+        .tab-button.powerups:hover {
+            background: linear-gradient(135deg, #AB47BC, #8E24AA);
+            box-shadow: 0 4px 16px rgba(156,39,176,0.4);
+        }
+        
+        .tab-button.powerups.active {
+            background: linear-gradient(135deg, #E91E63, #C2185B);
+            border-color: rgba(233,30,99,0.6);
+            box-shadow: 0 4px 16px rgba(233,30,99,0.4);
+        }
+        
+        .breach-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: linear-gradient(145deg, #ff9800, #f57c00);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            animation: badge-pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes badge-pulse {
+            0%, 100% { 
+                transform: scale(1);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            }
+            50% { 
+                transform: scale(1.1);
+                box-shadow: 0 3px 8px rgba(255,152,0,0.4);
+            }
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .score-item {
+            color: #00ff00;
+            font-weight: bold;
+            margin: 2px 10px;
+            font-size: 12px;
+        }
+        
+        .difficulty-indicator {
+            color: #00ffff;
+            font-weight: bold;
+        }
+        
+        .market-container {
+            background: rgba(0,0,0,0.6);
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .powerups-container {
+            background: rgba(156,39,176,0.2);
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 1200px;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(156,39,176,0.2);
+            border: 2px solid rgba(156,39,176,0.3);
+            min-height: 300px;
+        }
+        
+        .powerups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .powerup-card {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .powerup-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #9C27B0, #E91E63);
+        }
+        
+        .powerup-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(156,39,176,0.4);
+            box-shadow: 0 8px 25px rgba(156,39,176,0.2);
+        }
+        
+        .powerup-card.active {
+            border-color: rgba(76,175,80,0.6);
+            background: rgba(76,175,80,0.1);
+            box-shadow: 0 0 20px rgba(76,175,80,0.3);
+        }
+        
+        .powerup-card.active::before {
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+        }
+        
+        .powerup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .powerup-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .powerup-count {
+            background: linear-gradient(135deg, #ffd700, #ffb300);
+            color: #000;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+        
+        .powerup-description {
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        
+        .powerup-status {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        
+        .powerup-button {
+            width: 100%;
+            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+        
+        .powerup-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, #AB47BC, #8E24AA);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(156,39,176,0.3);
+        }
+        
+        .powerup-button:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .powerup-cooldown {
+            text-align: center;
+            font-size: 11px;
+            color: #ff9800;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+        
+        .market-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 18px;
+            height: 55px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .market-row:hover {
+            transform: translateY(-1px);
+        }
+        
+        .buy-btn, .sell-btn {
+            width: 60px;
+            height: 35px;
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            position: relative;
+            z-index: 20;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+        }
+        
+        .buy-btn {
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+            margin-right: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .buy-btn:hover {
+            background: linear-gradient(145deg, #5cbf60, #4CAF50);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 5px 12px rgba(76,175,80,0.3);
+        }
+        
+        .buy-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .sell-btn {
+            background: linear-gradient(145deg, #f44336, #da190b);
+            margin-left: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sell-btn:hover {
+            background: linear-gradient(145deg, #f66356, #f44336);
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 5px 12px rgba(244,67,54,0.3);
+        }
+        
+        .sell-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+        
+        .exposure-container {
+            flex: 1;
+            height: 45px;
+            position: relative;
+            background: rgba(255,255,255,0.08);
+            border-radius: 6px;
+            margin: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+        }
+        
+        .breach-countdown {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 30px;
+            height: 30px;
+            z-index: 15;
+        }
+        
+        .countdown-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: conic-gradient(#ff0000 0deg, #ff0000 var(--progress), transparent var(--progress));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: timer-bounce 0.6s ease-in-out infinite;
+            position: relative;
+            border: 2px solid rgba(255,255,255,0.8);
+        }
+        
+        .countdown-circle::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            right: 6px;
+            bottom: 6px;
+            background: rgba(0,0,0,0.8);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .countdown-text {
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            text-shadow: 1px 1px 1px #000;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .exposure-bar {
+            height: 100%;
+            border-radius: 6px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.2);
+        }
+        
+        .exposure-bar.short {
+            right: 50%;
+            margin-right: 38px;
+        }
+        
+        .exposure-bar.long {
+            left: 50%;
+            margin-left: 38px;
+        }
+        
+        .exposure-bar.green {
+            background: linear-gradient(135deg, #00ff00, #32ff32, #00cc00);
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.2);
+        }
+        
+        .exposure-bar.yellow {
+            background: linear-gradient(135deg, #ffff00, #ffff32, #cccc00);
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.2);
+        }
+        
+        .exposure-bar.red {
+            background: linear-gradient(135deg, #ff0000, #ff3232, #cc0000);
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.2);
+            animation: breach-pulse 1s ease-in-out infinite;
+        }
+        
+        .exposure-bar.white {
+            background: linear-gradient(135deg, #ffffff, #f0f0f0, #e0e0e0);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+            animation: critical-pulse 0.7s ease-in-out infinite;
+        }
+        
+        .market-info {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(145deg, rgba(0,0,0,0.95), rgba(20,20,20,0.95));
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10;
+            border: 1px solid rgba(255,255,255,0.2);
+            min-width: 85px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .market-row:hover .market-info {
+            transform: translate(-50%, -50%) scale(1.02);
+            border-color: rgba(255,255,255,0.3);
+        }
+        
+        .market-name {
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        .market-limit {
+            color: #00d4ff;
+            font-size: 10px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        
+        .exposure-value {
+            color: #ffeb3b;
+            font-size: 10px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+            transition: color 0.3s ease;
+        }
+        
+        .warning {
+            animation: breach-shake 1.5s ease-in-out infinite;
+        }
+        
+        .warning .exposure-container {
+            border-color: rgba(255,0,0,0.5);
+            background: rgba(255,0,0,0.05);
+        }
+        
+        .critical-warning {
+            animation: critical-shake 1s ease-in-out infinite;
+        }
+        
+        .critical-warning .exposure-container {
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .market-frozen {
+            opacity: 0.5;
+        }
+        
+        .market-frozen .exposure-container {
+            background: rgba(0,255,255,0.1) !important;
+            border-color: rgba(0,255,255,0.3) !important;
+        }
+        
+        .volatility-shielded .exposure-container {
+            background: rgba(76,175,80,0.1) !important;
+            border-color: rgba(76,175,80,0.3) !important;
+        }
+        
+        @keyframes breach-pulse {
+            0%, 100% { 
+                filter: brightness(1);
+                transform: scaleY(1);
+            }
+            50% { 
+                filter: brightness(1.1);
+                transform: scaleY(1.02);
+            }
+        }
+        
+        @keyframes critical-pulse {
+            0%, 100% { 
+                filter: brightness(1);
+                transform: scaleY(1);
+            }
+            50% { 
+                filter: brightness(1.15);
+                transform: scaleY(1.03);
+            }
+        }
+        
+        @keyframes breach-shake {
+            0%, 100% { 
+                transform: translateX(0);
+            }
+            25% { 
+                transform: translateX(1px);
+            }
+            75% { 
+                transform: translateX(-1px);
+            }
+        }
+        
+        @keyframes critical-shake {
+            0%, 100% { 
+                transform: translateX(0);
+            }
+            20% { 
+                transform: translateX(2px);
+            }
+            40% { 
+                transform: translateX(-2px);
+            }
+            60% { 
+                transform: translateX(1px);
+            }
+            80% { 
+                transform: translateX(-1px);
+            }
+        }
+        
+        @keyframes timer-bounce {
+            0%, 100% { 
+                transform: scale(1);
+            }
+            50% { 
+                transform: scale(1.08);
+            }
+        }
+        
+        .market-row:hover .exposure-bar {
+            filter: brightness(1.05);
+        }
+        
+        .market-row.trade-feedback {
+            animation: trade-success 0.5s ease-out;
+        }
+        
+        @keyframes trade-success {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(3px); }
+            75% { transform: translateX(-3px); }
+            100% { transform: translateX(0); }
+        }
+        
+        .game-controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .control-btn {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        
+        .control-btn:hover {
+            background: #1976D2;
+        }
+        
+        .paused {
+            background: #FF9800;
+        }
+        
+        .paused:hover {
+            background: #F57C00;
+        }
+        
+        .admin-btn {
+            background: #9C27B0;
+        }
+        
+        .admin-btn:hover {
+            background: #7B1FA2;
+        }
+        
+        .admin-panel {
+            background: rgba(0,0,0,0.9);
+            border: 2px solid rgba(156,39,176,0.5);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            color: white;
+            font-size: 12px;
+        }
+        
+        .admin-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        
+        .admin-section h3 {
+            color: #9C27B0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(156,39,176,0.3);
+            padding-bottom: 5px;
+        }
+        
+        .admin-control {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            padding: 8px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+        }
+        
+        .admin-control label {
+            color: #ffffff;
+            font-weight: bold;
+            flex: 1;
+            font-size: 11px;
+        }
+        
+        .admin-control input {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: 70px;
+            text-align: center;
+            font-size: 10px;
+        }
+        
+        .admin-control input:focus {
+            outline: none;
+            border-color: #9C27B0;
+            box-shadow: 0 0 5px rgba(156,39,176,0.5);
+        }
+        
+        .profile-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+    background: linear-gradient(145deg, rgba(30,60,114,0.95), rgba(42,82,152,0.95));
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.leaderboard-tabs {
+    display: flex;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    margin-bottom: 25px;
+}
+
+.leaderboard-tab-button {
+    flex: 1;
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.6);
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.leaderboard-tab-button:hover {
+    color: rgba(255,255,255,0.9);
+}
+
+.leaderboard-tab-button.active {
+    color: #00d4ff;
+}
+
+.leaderboard-tab-button.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #00d4ff, #0099cc);
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+.leaderboard-content {
+    min-height: 300px;
+}
+
+.modal-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    margin: 20px 0;
+    padding-right: 10px;
+}
+
+.modal-scrollable::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-scrollable::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+}
+
+.modal-scrollable::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.3);
+    border-radius: 3px;
+}
+        
+        .modal-title {
+            color: #ffffff;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-label {
+            color: #ffffff;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-input {
+            width: 100%;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: inherit;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 8px rgba(0,212,255,0.5);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .modal-btn {
+            background: #00d4ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        .modal-btn:hover {
+            background: #0099cc;
+            transform: translateY(-1px);
+        }
+        
+        .modal-btn.secondary {
+            background: #666;
+        }
+        
+        .modal-btn.secondary:hover {
+            background: #555;
+        }
+        
+        .global-effects-bar {
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            min-height: 40px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .global-effects-bar.has-effects {
+            display: flex;
+        }
+        
+        .strike-icon {
+            font-size: 14px;
+            margin: 0 2px;
+            transition: all 0.3s ease;
+        }
+
+        .strike-icon.active {
+            color: #ff4444;
+            text-shadow: 0 0 8px rgba(255,68,68,0.6);
+        }
+
+        .strike-icon.lost {
+            color: #666;
+            text-shadow: none;
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+
+        .strike-icon.warning {
+            animation: strike-warning 1s ease-in-out infinite;
+        }
+
+        @keyframes strike-warning {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); filter: brightness(1.3); }
+        }
+
+        @keyframes fire-pulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.2); }
+}
+        
+        .effect-indicator {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 5px;
+            display: inline-block;
+        }
+        
+        .effect-freeze {
+            background: linear-gradient(135deg, #00bcd4, #0097a7);
+            color: white;
+            animation: freeze-pulse 1s ease-in-out infinite;
+        }
+        
+        .effect-shield {
+            background: linear-gradient(135deg, #4caf50, #388e3c);
+            color: white;
+            animation: shield-pulse 1s ease-in-out infinite;
+        }
+        
+        @keyframes freeze-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes shield-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .game-over-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999 !important;
+    /* backdrop-filter: blur(10px); */
+}
+
+.game-over-content {
+    background: linear-gradient(145deg, rgba(30,60,114,0.95), rgba(42,82,152,0.95));
+    border: 3px solid rgba(255,69,0,0.6);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    animation: game-over-appear 0.5s ease-out;
+}
+
+@keyframes game-over-appear {
+    0% { 
+        opacity: 0; 
+        transform: scale(0.8) translateY(50px); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: scale(1) translateY(0); 
+    }
+}
+
+.game-over-title {
+    color: #ff4444;
+    font-size: 36px;
+    font-weight: 900;
+    margin-bottom: 10px;
+    text-shadow: 0 4px 8px rgba(255,68,68,0.5);
+    animation: title-pulse 2s ease-in-out infinite;
+}
+
+@keyframes title-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+.game-over-subtitle {
+    color: rgba(255,255,255,0.8);
+    font-size: 16px;
+    margin-bottom: 30px;
+}
+
+.game-over-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.game-over-stat {
+    background: rgba(0,0,0,0.4);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #00ff88;
+    margin-bottom: 5px;
+    text-shadow: 0 2px 4px rgba(0,255,136,0.3);
+}
+
+.stat-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.game-over-summary {
+    background: rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+.summary-title {
+    color: #ffd700;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.summary-item:last-child {
+    border-bottom: none;
+}
+
+.summary-label {
+    color: rgba(255,255,255,0.8);
+    font-size: 14px;
+}
+
+.summary-value {
+    color: #00ff88;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.game-over-actions {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.game-over-btn {
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0,212,255,0.3);
+}
+
+.game-over-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,212,255,0.4);
+}
+
+.game-over-btn.secondary {
+    background: linear-gradient(135deg, #666, #555);
+    box-shadow: 0 4px 16px rgba(102,102,102,0.3);
+}
+
+.game-over-btn.secondary:hover {
+    box-shadow: 0 6px 20px rgba(102,102,102,0.4);
+}
+    </style>
+</head>
+<body>
+    <!-- Authentication Screen -->
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-container">
+            <!-- Login Form -->
+            <div id="loginForm">
+                <div class="auth-header">
+                    <h1 class="auth-title">Welcome Back</h1>
+                    <p class="auth-subtitle">Sign in to continue your trading journey</p>
+                </div>
+                
+                <form class="auth-form" onsubmit="handleLogin(event)">
+                    <div class="auth-input-group">
+                        <label class="auth-label">Email</label>
+                        <input type="email" class="auth-input" id="loginEmail" placeholder="Enter your email" required>
+                    </div>
+                    
+                    <div class="auth-input-group">
+                        <label class="auth-label">Password</label>
+                        <input type="password" class="auth-input" id="loginPassword" placeholder="Enter your password" required>
+                    </div>
+                    
+                    <div id="loginError" class="auth-error" style="display: none;"></div>
+                    
+                    <button type="submit" class="auth-button" id="loginButton">
+                        Sign In
+                    </button>
+                </form>
+                
+                <div class="auth-toggle">
+                    Don't have an account? <a href="#" class="auth-link" onclick="showRegisterForm()">Sign up</a>
+                </div>
+                
+                <div class="guest-option">
+                    <button class="guest-button" onclick="continueAsGuest()">Continue as Guest</button>
+                </div>
+            </div>
+            
+            <!-- Register Form -->
+            <div id="registerForm" style="display: none;">
+                <div class="auth-header">
+                    <h1 class="auth-title">Join TradingPro</h1>
+                    <p class="auth-subtitle">Create your account to save progress</p>
+                </div>
+                
+                <form class="auth-form" onsubmit="handleRegister(event)">
+                    <div class="auth-input-group">
+                        <label class="auth-label">Email</label>
+                        <input type="email" class="auth-input" id="registerEmail" placeholder="Enter your email" required>
+                    </div>
+                    
+                    <div class="auth-input-group">
+                        <label class="auth-label">Username</label>
+                        <input type="text" class="auth-input" id="registerUsername" placeholder="Choose a username" required minlength="3" maxlength="20">
+                    </div>
+                    
+                    <div class="auth-input-group">
+                        <label class="auth-label">Password</label>
+                        <input type="password" class="auth-input" id="registerPassword" placeholder="Create a password" required minlength="6">
+                    </div>
+                    
+                    <div class="auth-input-group">
+                        <label class="auth-label">Confirm Password</label>
+                        <input type="password" class="auth-input" id="confirmPassword" placeholder="Confirm your password" required>
+                    </div>
+                    
+                    <div id="registerError" class="auth-error" style="display: none;"></div>
+                    <div id="registerSuccess" class="auth-success" style="display: none;"></div>
+                    
+                    <button type="submit" class="auth-button" id="registerButton">
+                        Create Account
+                    </button>
+                </form>
+                
+                <div class="auth-toggle">
+                    Already have an account? <a href="#" class="auth-link" onclick="showLoginForm()">Sign in</a>
+                </div>
+                
+                <div class="guest-option">
+                    <button class="guest-button" onclick="continueAsGuest()">Continue as Guest</button>
+                </div>
+            </div>
+        </div>
+    </div>
+     <!-- Menu Screen -->
+     <div class="menu-screen" id="menuScreen">
+        <div class="background-pattern"></div>
+        
+        <div class="menu-content">
+            <div class="hero-section">
+                <div class="app-icon">📈</div>
+                <h1 class="app-title">TradingPro</h1>
+                <p class="app-tagline">Master market exposure</p>
+            </div>
+            
+            <div class="floating-card">
+                <div class="menu-user-info">
+                    <div class="menu-user-name" id="menuUsername">Guest Trader</div>
+                    <div class="menu-level-container">
+                        <div class="menu-level-circle" id="menuLevelCircle">L1</div>
+                        <div class="menu-progress-info">
+                            <div class="menu-progress-bar">
+                                <div class="menu-progress-fill" id="menuXpBar" style="width: 0%;"></div>
+                            </div>
+                            <div class="menu-progress-text" id="menuXpText">0 / 100 XP</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="menu-stats-grid">
+                    <div class="menu-stat-card">
+                        <div class="menu-stat-number" id="menuGamesPlayed">0</div>
+                        <div class="menu-stat-label">Games</div>
+                    </div>
+                    <div class="menu-stat-card">
+                        <div class="menu-stat-number" id="menuBestScore">0</div>
+                        <div class="menu-stat-label">Best Score</div>
+                    </div>
+                    <div class="menu-stat-card">
+                        <div class="menu-stat-number" id="menuCoins" style="color: #ffd700;">0</div>
+                        <div class="menu-stat-label">Coins</div>
+                    </div>
+                    <div class="menu-stat-card">
+                        <div class="menu-stat-number" id="menuAssets">3</div>
+                        <div class="menu-stat-label">Assets</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="floating-card">
+                <div class="menu-section-title">Difficulty</div>
+                <div class="menu-difficulty-pills">
+                    <div class="menu-difficulty-pill" data-difficulty="1" onclick="selectMenuDifficulty(1)">Easy</div>
+                    <div class="menu-difficulty-pill active" data-difficulty="2" onclick="selectMenuDifficulty(2)">Normal</div>
+                    <div class="menu-difficulty-pill" data-difficulty="3" onclick="selectMenuDifficulty(3)">Hard</div>
+                </div>
+            </div>
+            
+            <div class="menu-main-actions">
+                <button class="menu-action-btn" onclick="startGame()">🎮 Start Trading</button>
+                
+                <div class="menu-secondary-actions">
+                    <button class="menu-secondary-btn" onclick="showShop()">🛒 Shop</button>
+                    <button class="menu-secondary-btn" onclick="showCareer()">💼 Career</button>
+                    <button class="menu-secondary-btn" onclick="showInstructions()">📖 Guide</button>
+                    <button class="menu-secondary-btn" onclick="showLeaderboard()">🏆 Leaderboard</button>
+                </div>
+                
+    <!-- Logout button (only shows when logged in) -->
+    <button class="menu-action-btn logout-btn" id="logoutBtn" onclick="handleLogout()" style="display: none; background: linear-gradient(135deg, #f44336, #d32f2f);">
+        🚪 Logout
+    </button>
+    
+    <!-- Create Account button (only shows for guests) -->
+    <button class="menu-action-btn" id="createAccountBtn" onclick="guestCreateAccount()" style="display: none; background: linear-gradient(135deg, #4CAF50, #45a049);">
+        📝 Create Account
+    </button>
+            </div>
+            
+            <div class="menu-version-info">Trading Exposure Manager v2.1</div>
+        </div>
+    </div>
+    
+    <!-- Stats Modal -->
+    <div class="profile-modal" id="statsModal" style="display: none;">
+        <div class="modal-content">
+            <h2 class="modal-title">📊 Player Statistics</h2>
+            <div style="text-align: left; margin: 20px 0;">
+                <div style="margin-bottom: 10px;"><strong>Total Games:</strong> <span id="totalGames">0</span></div>
+                <div style="margin-bottom: 10px;"><strong>Best Score:</strong> <span id="bestScore">0</span></div>
+                <div style="margin-bottom: 10px;"><strong>Total XP:</strong> <span id="totalXP">0</span></div>
+                <div style="margin-bottom: 10px;"><strong>Level:</strong> <span id="currentLevel">1</span></div>
+                <div style="margin-bottom: 10px;"><strong>Trades:</strong> <span id="totalTrades">0</span></div>
+                <div style="margin-bottom: 10px;"><strong>Breaches Fixed:</strong> <span id="breachesFixed">0</span></div>
+                <div style="margin-bottom: 10px;"><strong>Win Rate:</strong> <span id="winRate">0%</span></div>
+                <div style="margin-bottom: 10px;"><strong>Total Coins:</strong> <span id="totalCoins">0</span></div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeStatsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaderboard Modal -->
+    <div class="profile-modal" id="leaderboardModal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 class="modal-title">🏆 Leaderboard</h2>
+            
+            <div class="leaderboard-tabs">
+                <button class="leaderboard-tab-button active" onclick="switchLeaderboardTab('level')">
+                    👑 Highest Level
+                </button>
+                <button class="leaderboard-tab-button" onclick="switchLeaderboardTab('score')">
+                    🌟 Top Scores
+                </button>
+            </div>
+            
+            <div class="modal-scrollable">
+                <div id="levelLeaderboard" class="leaderboard-content">
+                    <div style="color: #888; text-align: center; padding: 20px;">Loading...</div>
+                </div>
+                
+                <div id="scoreLeaderboard" class="leaderboard-content" style="display: none;">
+                    <div style="color: #888; text-align: center; padding: 20px;">Loading...</div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeLeaderboard()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Instructions Modal -->
+    <div class="profile-modal" id="instructionsModal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2 class="modal-title">📖 How to Play</h2>
+            <div style="text-align: left; margin: 20px 0; line-height: 1.6;">
+                <h3 style="color: #00d4ff; margin-bottom: 10px;">🎯 Objective</h3>
+                <p style="margin-bottom: 15px;">Manage financial market exposures by keeping them within safe limits. Score points by making smart trades and avoiding breaches.</p>
+                
+                <h3 style="color: #00d4ff; margin-bottom: 10px;">🚦 Color System</h3>
+                <p style="margin-bottom: 15px;"><span style="color: #00ff00;">Green</span>: Safe (0-74% of limit) | <span style="color: #ffff00;">Yellow</span>: Warning (75-99%) | <span style="color: #ff0000;">Red</span>: Breach (100-149%) | <span style="color: #ffffff;">White</span>: Critical (150%+)</p>
+                
+                <h3 style="color: #00d4ff; margin-bottom: 10px;">⚡ Power-ups</h3>
+                <p style="margin-bottom: 15px;">Use the Power-ups tab to access strategic abilities: Market Freeze, Volatility Shield, Timer Freeze, and Reduce All exposures.</p>
+                
+                <h3 style="color: #00d4ff; margin-bottom: 10px;">🪙 Coins & Shop</h3>
+                <p>Earn coins by trading well, spend them in the shop to unlock new markets and power-ups!</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeInstructions()">Got It!</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Career Modal -->
+    <div class="profile-modal" id="careerModal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 class="modal-title">💼 Trading Career</h2>
+            <p style="text-align: center; color: rgba(255,255,255,0.7); font-size: 14px; margin-bottom: 30px;">Your journey from intern to market master</p>
+            
+            <div style="max-height: 400px; overflow-y: auto; padding-right: 10px;">
+                <div class="career-level unlocked" data-level="1">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #4CAF50, #45a049); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">1</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Intern I</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">Starting level</div>
+                    </div>
+                </div>
+                
+                <div class="career-level unlocked" data-level="2">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #4CAF50, #45a049); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">2</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Intern II</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">100 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level current" data-level="3">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #FFC107, #FF9800); color: #000; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2); animation: current-pulse 2s ease-in-out infinite;">3</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Intern III</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">350 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="4">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">4</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Junior Trader I</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">550 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="5">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">5</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Junior Trader II</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">800 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="6">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">6</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Junior Trader III</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">1100 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="7">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">7</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Trader I</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">1450 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="8">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">8</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Trader II</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">1850 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="9">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">9</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Trader III</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">2300 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="10">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">10</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Senior Trader I</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">2800 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="11">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">11</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Senior Trader II</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">3350 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="12">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">12</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Senior Trader III</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">3950 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="13">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">13</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Lead Trader I</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">4600 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="14">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">14</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Lead Trader II</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">5300 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="15">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">15</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Lead Trader III</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">6050 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="16">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">16</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Principal Trader</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">6850 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="17">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">17</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">VP Trading</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">7700 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="18">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">18</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Managing Director</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">8600 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="19">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">19</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Head of Trading</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">9550 XP required</div>
+                    </div>
+                </div>
+                
+                <div class="career-level locked" data-level="20">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; margin-right: 16px; border: 2px solid rgba(255,255,255,0.2);">20</div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 4px;">Market Master</div>
+                        <div style="font-size: 12px; color: rgba(255,255,255,0.6);">10550 XP required</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeCareer()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game Over Modal -->
+    <div class="game-over-modal" id="gameOverModal" style="display: none;">
+        <div class="game-over-content">
+            <h1 class="game-over-title">GAME OVER</h1>
+            <p class="game-over-subtitle" id="gameOverMessage">You ran out of lives!</p>
+            
+            <div class="game-over-stats">
+                <div class="game-over-stat">
+                    <div class="stat-value" id="finalScore">0</div>
+                    <div class="stat-label">Final Score</div>
+                </div>
+                <div class="game-over-stat">
+                    <div class="stat-value" id="survivalTime">0s</div>
+                    <div class="stat-label">Time Survived</div>
+                </div>
+                <div class="game-over-stat">
+                    <div class="stat-value" id="totalTradesMade">0</div>
+                    <div class="stat-label">Trades Made</div>
+                </div>
+                <div class="game-over-stat">
+                    <div class="stat-value" id="breachesHandled">0</div>
+                    <div class="stat-label">Breaches Fixed</div>
+                </div>
+            </div>
+            
+            <div class="game-over-summary">
+                <div class="summary-title">Session Rewards</div>
+                <div class="summary-item">
+                    <span class="summary-label">XP Earned</span>
+                    <span class="summary-value" id="sessionXP">+0 XP</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Coins Earned</span>
+                    <span class="summary-value" id="sessionCoins">+0</span>
+                </div>
+                <div class="summary-item" id="levelUpIndicator" style="display: none;">
+                    <span class="summary-label">Level Up!</span>
+                    <span class="summary-value" style="color: #ffd700;">New Level Achieved!</span>
+                </div>
+                <div class="summary-item" id="newBestScore" style="display: none;">
+                    <span class="summary-label">New Best Score!</span>
+                    <span class="summary-value" style="color: #ff69b4;">Personal Record!</span>
+                </div>
+            </div>
+            
+            <div class="game-over-actions">
+                <button class="game-over-btn" onclick="playAgain()">Play Again</button>
+                <button class="game-over-btn secondary" onclick="closeGameOver()">Main Menu</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pause Menu Modal -->
+    <div class="game-over-modal" id="pauseMenuModal" style="display: none;">
+        <div class="game-over-content" style="border-color: rgba(0,212,255,0.6);">
+            <h1 class="game-over-title" style="color: #00d4ff; animation: none;">GAME PAUSED</h1>
+            <p class="game-over-subtitle">What would you like to do?</p>
+            
+            <div style="margin: 30px 0;">
+                <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.15);">
+                    <div style="color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 10px;">Current Session:</div>
+                    <div style="color: #00ff88; font-weight: 700; font-size: 16px;">Score: <span id="pauseScore">0</span></div>
+                    <div style="color: #00ff88; font-weight: 700; font-size: 16px;">Time: <span id="pauseTime">0s</span></div>
+                </div>
+            </div>
+            
+            <div class="game-over-actions">
+                <button class="game-over-btn" onclick="resumeGame()">▶️ Resume Game</button>
+                <button class="game-over-btn secondary" onclick="endGameFromPause()">🏁 End Game</button>
+            </div>
+        </div>
+    </div>
+    
+    
+    <!-- Game Screen -->
+    <div class="game-screen" id="gameScreen">
+        <div class="header"><h1>Trading Exposure Manager</h1></div>
+        
+        <div class="user-profile">
+            <div class="profile-left">
+                <div class="username-display" id="usernameDisplay">Guest Trader</div>
+                <div class="level-info">
+                    <div class="level-badge" id="levelBadge">Level 1</div>
+                    <div class="xp-bar-container">
+                        <div class="xp-bar" id="xpBar" style="width: 0%;"></div>
+                    </div>
+                    <div class="xp-text" id="xpText">0 / 100 XP</div>
+                </div>
+            </div>
+            <div class="profile-buttons">
+                <button class="profile-btn" onclick="showPauseMenu()">🏠 Menu</button>
+                <button class="profile-btn" onclick="showShop()">🛒 Shop</button>
+                <button class="profile-btn" onclick="showStats()">📊 Stats</button>
+                <div class="coins-display" id="coinsDisplay">0 🪙</div>
+            </div>
+        </div>
+        
+        <div class="asset-tabs">
+            <button class="tab-button active" onclick="switchAssetClass('indices')">
+                Indices
+                <span class="breach-badge" id="badge-indices" style="display: none;">0</span>
+            </button>
+            <button class="tab-button" onclick="switchAssetClass('forex')">
+                Forex
+                <span class="breach-badge" id="badge-forex" style="display: none;">0</span>
+            </button>
+            <button class="tab-button" onclick="switchAssetClass('shares')" id="sharesTab">
+                Shares
+                <span class="breach-badge" id="badge-shares" style="display: none;">0</span>
+                <span id="sharesLock" style="position: absolute; top: -5px; right: -5px; font-size: 14px;">🔒</span>
+            </button>
+            <button class="tab-button" onclick="switchAssetClass('commodities')">
+                Commodities
+                <span class="breach-badge" id="badge-commodities" style="display: none;">0</span>
+            </button>
+            <button class="tab-button" onclick="switchAssetClass('crypto')" id="cryptoTab">
+                Crypto
+                <span class="breach-badge" id="badge-crypto" style="display: none;">0</span>
+                <span id="cryptoLock" style="position: absolute; top: -5px; right: -5px; font-size: 14px;">🔒</span>
+            </button>
+            <button class="tab-button powerups" onclick="switchToPowerups()">
+                ⚡ Power-ups
+            </button>
+        </div>
+        
+        <div class="score-board">
+            <div class="score-item">Score: <span id="score">0</span></div>
+            <div class="score-item">Trades: <span id="trades">0</span></div>
+            <div class="score-item">Breaches: <span id="breaches">0</span></div>
+            <div class="score-item">
+                <span id="strikesDisplay">
+                    <span class="strike-icon active" id="strike1">❤️</span>
+                    <span class="strike-icon active" id="strike2">❤️</span>
+                    <span class="strike-icon active" id="strike3">❤️</span>
+                </span>
+            </div>
+            <div class="score-item">Time: <span id="time">0</span>s</div>
+            <div class="score-item difficulty-indicator">Difficulty: <span id="difficulty">Normal</span></div>
+        </div>
+        
+        <div class="global-effects-bar" id="globalEffectsBar">
+            <div id="activeEffects">No active effects</div>
+        </div>
+        
+        <div class="market-container" id="marketsContainer">
+            <div id="markets"></div>
+        </div>
+        
+        <div class="powerups-container" id="powerupsContainer" style="display: none;">
+            <h2 style="text-align: center; margin-bottom: 10px; color: #FFD700;">⚡ Power-ups Arsenal</h2>
+            <p style="text-align: center; color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 20px;">Use strategic abilities to manage market chaos</p>
+            
+            <div class="powerups-grid">
+                <div class="powerup-card" id="freezeCard">
+                    <div class="powerup-header">
+                        <div class="powerup-title">❄️ Market Freeze</div>
+                        <div class="powerup-count" id="freezeCount">0</div>
+                    </div>
+                    <div class="powerup-description">
+                        Freeze all market movements for 10 seconds. Perfect for stopping cascading breaches or buying time to strategize.
+                    </div>
+                    <div class="powerup-status" id="freezeStatus">Ready to use</div>
+                    <button class="powerup-button" id="freezeButton" onclick="usePowerup('marketFreeze')">
+                        ACTIVATE FREEZE
+                    </button>
+                    <div class="powerup-cooldown" id="freezeCooldown" style="display: none;">Ready in <span id="freezeTimer">0</span>s</div>
+                </div>
+                
+                <div class="powerup-card" id="shieldCard">
+                    <div class="powerup-header">
+                        <div class="powerup-title">🛡️ Volatility Shield</div>
+                        <div class="powerup-count" id="shieldCount">0</div>
+                    </div>
+                    <div class="powerup-description">
+                        Reduce market volatility by 70% for 15 seconds. Gives you breathing room during high-stress periods.
+                    </div>
+                    <div class="powerup-status" id="shieldStatus">Ready to use</div>
+                    <button class="powerup-button" id="shieldButton" onclick="usePowerup('volatilityShield')">
+                        ACTIVATE SHIELD
+                    </button>
+                    <div class="powerup-cooldown" id="shieldCooldown" style="display: none;">Ready in <span id="shieldTimer">0</span>s</div>
+                </div>
+                
+                <div class="powerup-card" id="reduceCard">
+                    <div class="powerup-header">
+                        <div class="powerup-title">📉 Reduce All</div>
+                        <div class="powerup-count" id="reduceAllCount">0</div>
+                    </div>
+                    <div class="powerup-description">
+                        Instantly cut all current exposures by 25%. Emergency risk reduction across your entire portfolio.
+                    </div>
+                    <div class="powerup-status" id="reduceStatus">Ready to use</div>
+                    <button class="powerup-button" id="reduceButton" onclick="usePowerup('reduceExposures')">
+                        REDUCE EXPOSURES
+                    </button>
+                    <div class="powerup-cooldown" id="reduceCooldown" style="display: none;">Ready in <span id="reduceTimer">0</span>s</div>
+                </div>
+                
+                <div class="powerup-card" id="oldFreezeCard">
+                    <div class="powerup-header">
+                        <div class="powerup-title">⏸️ Freeze Timer</div>
+                        <div class="powerup-count" id="oldFreezeCount">0</div>
+                    </div>
+                    <div class="powerup-description">
+                        Stop breach countdown timers for 5 seconds. Gives extra time to resolve critical situations.
+                    </div>
+                    <div class="powerup-status" id="oldFreezeStatus">Ready to use</div>
+                    <button class="powerup-button" id="oldFreezeButton" onclick="usePowerup('freezeTimer')">
+                        STOP TIMERS
+                    </button>
+                    <div class="powerup-cooldown" id="oldFreezeCooldown" style="display: none;">Ready in <span id="oldFreezeTimer">0</span>s</div>
+                </div>
+                <div class="powerup-card" id="tradingPlacesCard">
+                    <div class="powerup-header">
+                        <div class="powerup-title">🏭 Trading Places</div>
+                        <div class="powerup-count" id="tradingPlacesCount">0</div>
+                    </div>
+                    <div class="powerup-description">
+                        Commodity market exposures are frozen for 60 seconds. Prevents all commodity fluctuations while other markets continue.
+                    </div>
+                    <div class="powerup-status" id="tradingPlacesStatus">Ready to use</div>
+                    <button class="powerup-button" id="tradingPlacesButton" onclick="usePowerup('tradingPlaces')">
+                        TURN THOSE MACHINES BACK ON!
+                    </button>
+                    <div class="powerup-cooldown" id="tradingPlacesCooldown" style="display: none;">Ready in <span id="tradingPlacesTimer">0</span>s</div>
+                </div>
+                
+                <div class="powerup-card" id="hotVolsCard">
+                    <div class="powerup-header">
+                        <div class="powerup-title">🔥 Hot Vols</div>
+                        <div class="powerup-count" id="hotVolsCount">0</div>
+                    </div>
+                    <div class="powerup-description">
+                        Doubles global market volatility for 30 seconds. Creates chaos but also opportunities for massive score gains.
+                    </div>
+                    <div class="powerup-status" id="hotVolsStatus">Ready to use</div>
+                    <button class="powerup-button" id="hotVolsButton" onclick="usePowerup('hotVols')">
+                        ACTIVATE HOT VOLS
+                    </button>
+                    <div class="powerup-cooldown" id="hotVolsCooldown" style="display: none;">Ready in <span id="hotVolsTimer">0</span>s</div>
+                </div>
+                
+                <div class="powerup-card" id="noddingBirdCard">
+                    <div class="powerup-header">
+                        <div class="powerup-title">🐦 Nodding Bird</div>
+                        <div class="powerup-count" id="noddingBirdCount">0</div>
+                    </div>
+                    <div class="powerup-description">
+                        Automatically hedges exposure breaches for 30 seconds. The bird nods and fixes breaches without your input.
+                    </div>
+                    <div class="powerup-status" id="noddingBirdStatus">Ready to use</div>
+                    <button class="powerup-button" id="noddingBirdButton" onclick="usePowerup('noddingBird')">
+                        ACTIVATE NODDING BIRD
+                    </button>
+                    <div class="powerup-cooldown" id="noddingBirdCooldown" style="display: none;">Ready in <span id="noddingBirdTimer">0</span>s</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-controls">
+            <button class="control-btn" id="pauseBtn" onclick="togglePause()">Pause</button>
+            <button class="control-btn" onclick="resetGame()">Reset</button>
+            <button class="control-btn" onclick="changeDifficulty()">Difficulty: <span id="difficultyDisplay">Normal</span></button>
+            <button class="control-btn admin-btn" onclick="toggleAdminPanel()">Admin</button>
+            <button class="control-btn" onclick="endGame('Test game over')">Test Game Over</button>
+        </div>
+        
+        <div class="admin-panel" id="adminPanel" style="display: none;">
+            <h2 style="color: #9C27B0; text-align: center; margin-bottom: 20px;">⚙️ Admin Settings</h2>
+            
+            <div class="admin-section">
+                <h3>Player Testing</h3>
+                <div class="admin-control">
+                    <label>Level Editor:</label>
+                    <input type="number" id="levelEditor" value="1" min="1" max="20" onchange="setPlayerLevel()">
+                </div>
+                <div class="admin-control">
+                    <label>Coins Editor:</label>
+                    <input type="number" id="coinsEditor" value="0" min="0" onchange="setPlayerCoins()">
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button onclick="unlockAllAssets()" style="padding: 8px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">Unlock All Assets</button>
+                    <button onclick="resetProgress()" style="padding: 8px 12px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px;">Reset Progress</button>
+                    <button onclick="giveAllPowerups()" style="padding: 8px 12px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer;">Give All Power-ups</button>
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3>Coin Rewards</h3>
+                <div class="admin-control">
+                    <label>Good Trade Coins:</label>
+                    <input type="number" id="goodTradeCoins" value="1" onchange="updateCoinSetting('goodTrade', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Breach Hedge Coins:</label>
+                    <input type="number" id="breachHedgeCoins" value="2" onchange="updateCoinSetting('breachHedge', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Breach Clear Coins:</label>
+                    <input type="number" id="breachClearCoins" value="8" onchange="updateCoinSetting('breachClear', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>End Game Divisor:</label>
+                    <input type="number" id="endGameDivisor" value="20" onchange="updateCoinSetting('endGameMultiplier', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Perfect Game Bonus:</label>
+                    <input type="number" id="perfectGameCoins" value="50" onchange="updateCoinSetting('perfectGameBonus', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Level Up Bonus:</label>
+                    <input type="number" id="levelUpCoins" value="25" onchange="updateCoinSetting('levelUpBonus', this.value)">
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3>Scoring System</h3>
+                <div class="admin-control">
+                    <label>Breach Hedge Points:</label>
+                    <input type="number" id="breachHedgePoints" value="25" onchange="updateAdminSetting('breachHedgePoints', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Breach Clear Bonus:</label>
+                    <input type="number" id="breachClearBonus" value="50" onchange="updateAdminSetting('breachClearBonus', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Good Trade Bonus:</label>
+                    <input type="number" id="goodTradeBonus" value="15" onchange="updateAdminSetting('goodTradeBonus', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Bad Trade Penalty:</label>
+                    <input type="number" id="badTradePenalty" value="-50" onchange="updateAdminSetting('badTradePenalty', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Cause Breach Penalty:</label>
+                    <input type="number" id="causeBreachPenalty" value="-100" onchange="updateAdminSetting('causeBreachPenalty', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Worse Breach Penalty:</label>
+                    <input type="number" id="worseBreachPenalty" value="-75" onchange="updateAdminSetting('worseBreachPenalty', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Timeout Penalty:</label>
+                    <input type="number" id="timeoutPenalty" value="-150" onchange="updateAdminSetting('timeoutPenalty', this.value)">
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3>Market Behavior</h3>
+                <div class="admin-control">
+                    <label>Global Volatility Multiplier:</label>
+                    <input type="number" step="0.1" id="globalVolatilityMultiplier" value="1.0" onchange="updateAdminSetting('globalVolatilityMultiplier', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Current Global Volatility:</label>
+                    <span id="currentGlobalVolatility" style="color: #00ff00; font-weight: bold;">1.0</span>
+                </div>
+                <div class="admin-control">
+                    <label>Breach Timer (seconds):</label>
+                    <input type="number" id="breachTimerSeconds" value="7" onchange="updateAdminSetting('breachTimerSeconds', this.value)">
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3>Asset Class Volatility Multipliers</h3>
+                <div class="admin-control">
+                    <label>Indices Volatility:</label>
+                    <input type="number" step="0.1" id="indicesVolatilityMultiplier" value="1.0" onchange="updateAssetSetting('assetVolatilityMultipliers', 'indices', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Forex Volatility:</label>
+                    <input type="number" step="0.1" id="forexVolatilityMultiplier" value="0.6" onchange="updateAssetSetting('assetVolatilityMultipliers', 'forex', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Shares Volatility:</label>
+                    <input type="number" step="0.1" id="sharesVolatilityMultiplier" value="1.4" onchange="updateAssetSetting('assetVolatilityMultipliers', 'shares', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Commodities Volatility:</label>
+                    <input type="number" step="0.1" id="commoditiesVolatilityMultiplier" value="1.2" onchange="updateAssetSetting('assetVolatilityMultipliers', 'commodities', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Crypto Volatility:</label>
+                    <input type="number" step="0.1" id="cryptoVolatilityMultiplier" value="2.0" onchange="updateAssetSetting('assetVolatilityMultipliers', 'crypto', this.value)">
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h3>Game End Conditions</h3>
+                <div class="admin-control">
+                    <label>Max Missed Timers:</label>
+                    <input type="number" id="maxMissedTimers" value="3" min="1" max="10" onchange="updateGameEndSetting('maxMissedTimers', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Time Limit (minutes):</label>
+                    <input type="number" id="timeLimitMinutes" value="5" min="1" max="30" onchange="updateGameEndSetting('timeLimitMinutes', this.value)">
+                </div>
+                <div class="admin-control">
+                    <label>Escalation Amount:</label>
+                    <input type="number" step="0.1" id="escalationAmount" value="0.5" min="0.1" max="2.0" onchange="updateGameEndSetting('escalationAmount', this.value)">
+                </div>
+                <div style="text-align: center; margin-top: 10px;">
+                    <button onclick="toggleGameEndCondition('enableMissedTimerLimit')" id="toggleMissedTimer" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">Missed Timer Limit: ON</button>
+                    <button onclick="toggleGameEndCondition('enableTimeLimit')" id="toggleTimeLimit" style="padding: 6px 12px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">Time Limit: OFF</button>
+                    <button onclick="toggleGameEndCondition('enableEscalatingDifficulty')" id="toggleEscalating" style="padding: 6px 12px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 2px;">Escalating: ON</button>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button class="control-btn" onclick="resetAdminSettings()">Reset to Defaults</button>
+                <button class="control-btn admin-btn" onclick="toggleAdminPanel()">Close Admin</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Shop Modal -->
+    <div class="profile-modal" id="shopModal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <h2 class="modal-title">🛒 Shop</h2>
+            <div style="margin-bottom: 20px; text-align: center;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #ffd700, #ffb300); color: #000; padding: 8px 16px; border-radius: 15px; font-weight: bold; font-size: 16px;">
+                    <span id="shopCoins">0</span> 🪙
+                </div>
+            </div>
+            
+            <div class="modal-scrollable" style="text-align: left;">
+                <h3 style="color: #00d4ff; margin-bottom: 15px;">Asset Classes</h3>
+                
+                <div class="shop-item" id="sharesShop">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">📈 Shares Markets</div>
+                            <div style="font-size: 12px; color: #ccc;">7 tech stock markets</div>
+                            <div style="font-size: 11px; color: #888;">Requires Level 3</div>
+                        </div>
+                        <button class="shop-btn" id="buyShares" onclick="buyShopItem('shares')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">150 🪙</button>
+                    </div>
+                </div>
+                
+                <div class="shop-item" id="cryptoShop">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">₿ Crypto Markets</div>
+                            <div style="font-size: 12px; color: #ccc;">7 cryptocurrency markets</div>
+                            <div style="font-size: 11px; color: #888;">Requires Level 5</div>
+                        </div>
+                        <button class="shop-btn" id="buyCrypto" onclick="buyShopItem('crypto')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">300 🪙</button>
+                    </div>
+                </div>
+                
+                <h3 style="color: #00d4ff; margin-bottom: 15px;">Power-Ups</h3>
+                
+                <div class="shop-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">❄️ Market Freeze</div>
+                            <div style="font-size: 12px; color: #ccc;">Stop all market movements for 10 seconds</div>
+                            <div style="font-size: 11px; color: #888;">Owned: <span id="marketFreezeShopCount">0</span></div>
+                        </div>
+                        <button class="shop-btn" onclick="buyShopItem('marketFreeze')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">75 🪙</button>
+                    </div>
+                </div>
+                
+                <div class="shop-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">🛡️ Volatility Shield</div>
+                            <div style="font-size: 12px; color: #ccc;">Reduce volatility by 70% for 15 seconds</div>
+                            <div style="font-size: 11px; color: #888;">Owned: <span id="volatilityShieldShopCount">0</span></div>
+                        </div>
+                        <button class="shop-btn" onclick="buyShopItem('volatilityShield')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">60 🪙</button>
+                    </div>
+                </div>
+                
+                <div class="shop-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">⏸️ Freeze Timer</div>
+                            <div style="font-size: 12px; color: #ccc;">Stop breach countdown for 5 seconds</div>
+                            <div style="font-size: 11px; color: #888;">Owned: <span id="freezeTimerShopCount">0</span></div>
+                        </div>
+                        <button class="shop-btn" onclick="buyShopItem('freezeTimer')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">25 🪙</button>
+                    </div>
+                </div>
+                
+                <div class="shop-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">📉 Reduce All</div>
+                            <div style="font-size: 12px; color: #ccc;">Cut all exposures by 25%</div>
+                            <div style="font-size: 11px; color: #888;">Owned: <span id="reduceExposuresShopCount">0</span></div>
+                        </div>
+                        <button class="shop-btn" onclick="buyShopItem('reduceExposures')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">50 🪙</button>
+                    </div>
+                </div>
+                <div class="shop-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">🏭 Trading Places</div>
+                            <div style="font-size: 12px; color: #ccc;">Freeze commodity markets for 60 seconds</div>
+                            <div style="font-size: 11px; color: #888;">Owned: <span id="tradingPlacesShopCount">0</span></div>
+                        </div>
+                        <button class="shop-btn" onclick="buyShopItem('tradingPlaces')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">100 🪙</button>
+                    </div>
+                </div>
+                
+                <div class="shop-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">🔥 Hot Vols</div>
+                            <div style="font-size: 12px; color: #ccc;">Double global volatility for 30 seconds</div>
+                            <div style="font-size: 11px; color: #888;">Owned: <span id="hotVolsShopCount">0</span></div>
+                        </div>
+                        <button class="shop-btn" onclick="buyShopItem('hotVols')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">80 🪙</button>
+                    </div>
+                </div>
+                
+                <div class="shop-item">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
+                        <div>
+                            <div style="font-weight: bold; color: #ffffff;">🐦 Nodding Bird</div>
+                            <div style="font-size: 12px; color: #ccc;">Auto-hedge breaches for 30 seconds</div>
+                            <div style="font-size: 11px; color: #888;">Owned: <span id="noddingBirdShopCount">0</span></div>
+                        </div>
+                        <button class="shop-btn" onclick="buyShopItem('noddingBird')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">120 🪙</button>
+                    </div>
+                </div>
+        
+            
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeShop()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load modules in dependency order -->
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="gameState.js"></script>
+    <script src="markets.js"></script>
+    <script src="trading.js"></script>
+    <script src="powerups.js"></script>
+    <script src="ui.js"></script>
+    <script src="stats.js"></script>
+    
+    <!-- Main initialization -->
+    <script>
+        window.addEventListener('load', initializeSupabase);
+    </script>
+
+
+</body>
+</html>

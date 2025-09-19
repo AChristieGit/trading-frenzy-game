@@ -55,7 +55,7 @@ def combine_modules(module_order):
     
     return combined_js
 
-def build_game(template_file="template.html", output_file="game.html"):
+def build_game(template_file="template.html", output_file="index.html"):
     """Build the complete game HTML file."""
     print("Trading Game Build Script")
     print("=" * 40)
@@ -126,7 +126,7 @@ def main():
     """Main function with command line argument support."""
     # Default file names
     template_file = "template.html"
-    output_file = "game.html"
+    output_file = "index.html"
     
     # Parse command line arguments
     if len(sys.argv) >= 2:

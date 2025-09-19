@@ -1271,19 +1271,19 @@
         }
         
         .modal-content {
-            background: linear-gradient(145deg, rgba(30,60,114,0.95), rgba(42,82,152,0.95));
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
+         background: linear-gradient(145deg, rgba(30,60,114,0.95), rgba(42,82,152,0.95));
+         border: 2px solid rgba(255,255,255,0.2);
+         border-radius: 15px;
+         padding: 30px;
+         max-width: 500px;
+         width: 90%;
+         text-align: center;
+         box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+         max-height: 90vh;
+         display: flex;
+         flex-direction: column;
+         overflow-y: auto;
+}
 
         .leaderboard-tabs {
             display: flex;
@@ -2099,8 +2099,11 @@
 <!-- Instructions Modal -->
 <div class="profile-modal" id="instructionsModal" style="display: none;">
     <div class="modal-content" style="max-width: 600px;">
-        <h2 class="modal-title">📖 How to Play</h2>
-        <div style="text-align: left; margin: 20px 0; line-height: 1.6;">
+        <div style="position: relative;">
+            <h2 class="modal-title">📖 How to Play</h2>
+            <button onclick="closeInstructions()" style="position: absolute; top: -10px; right: -10px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+        <div style="text-align: left; margin: 20px 0; line-height: 1.6; flex: 1; overflow-y: auto; max-height: 60vh;">
             <h3 style="color: #00d4ff; margin-bottom: 10px;">🎯 Objective</h3>
             <p style="margin-bottom: 15px;">Manage financial market exposures by keeping them within safe limits. Score points by making smart trades and avoiding breaches.</p>
             

@@ -52,7 +52,7 @@ const marketData = window.marketData || {
 };
 
 // Admin settings - scoring, timers, and rewards
-let adminSettings = window.adminSettings || {
+window.adminSettings = window.adminSettings || {
     breachHedgePoints: 25,     
     breachClearBonus: 50,      
     goodTradeBonus: 15,        
@@ -79,8 +79,10 @@ let adminSettings = window.adminSettings || {
     }
 };
 
+let adminSettings = window.adminSettings;
+
 // Game end conditions
-let gameEndSettings = window.gameEndSettings || {
+window.gameEndSettings = window.gameEndSettings || {
     enableTimeLimit: false,
     timeLimitMinutes: 5,
     enableMissedTimerLimit: true,
@@ -90,8 +92,10 @@ let gameEndSettings = window.gameEndSettings || {
     escalationAmount: 0.5
 };
 
+let gameEndSettings = window.gameEndSettings;
+
 // Power-up states
-let activePowerups = window.activePowerups || {
+window.activePowerups = window.activePowerups || {
     marketFreeze: { active: false, timeLeft: 0, cooldown: 0 },
     volatilityShield: { active: false, timeLeft: 0, cooldown: 0 },
     freezeTimer: { active: false, timeLeft: 0, cooldown: 0 },
@@ -100,6 +104,8 @@ let activePowerups = window.activePowerups || {
     hotVols: { active: false, timeLeft: 0, cooldown: 0 },
     noddingBird: { active: false, timeLeft: 0, cooldown: 0 }
 };
+
+let activePowerups = window.activePowerups;
 
 // Global game constants
 const baseGlobalVolatility = 1.0;

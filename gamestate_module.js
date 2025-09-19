@@ -56,6 +56,22 @@ let gameInterval = window.gameInterval;
 let timerInterval = window.timerInterval;
 let powerupInterval = window.powerupInterval;
 
+// Centralized interval management
+function clearAllIntervals() {
+    if (gameInterval) {
+        clearInterval(gameInterval);
+        gameInterval = null;
+    }
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    if (powerupInterval) {
+        clearInterval(powerupInterval);
+        powerupInterval = null;
+    }
+}
+
 // Admin panel state
 let showAdminPanel = window.showAdminPanel || false;
 
@@ -149,9 +165,7 @@ markets = marketData[currentAssetClass];
 // Game flow control
 function startGame() {
     // Clear any existing intervals first
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
  
     initializeAllAssetClasses();
     
@@ -209,9 +223,7 @@ function startGame() {
         activePowerups[powerupType] = { active: false, timeLeft: 0, cooldown: 0 };
     });
     
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
 
     // Ensure markets is properly initialized for the current asset class
 markets = [...marketData[currentAssetClass]];
@@ -240,9 +252,7 @@ markets = [...marketData[currentAssetClass]];
 
 function endGame(message) {
     
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
     
     const gameXP = Math.max(0, Math.floor(score / 10));
     const gameCoins = Math.max(0, Math.floor(score / adminSettings.coinRewards.endGameMultiplier));
@@ -260,17 +270,23 @@ function endGame(message) {
         userProfile.wins++;
     }
     
-    // Save game session data
-    if (currentUser && !isGuestMode) {
+// Save game session data with error handling
+if (currentUser && !isGuestMode) {
+    try {
+        validateAndRepairUserProfile(); // Ensure data integrity before saving
         saveGameSession({
-            score: score,
-            duration: gameTime,
-            trades: trades,
-            breaches: breaches,
-            difficulty: gameDifficulty
+            score: Math.max(0, score),
+            duration: Math.max(0, gameTime),
+            trades: Math.max(0, trades),
+            breaches: Math.max(0, breaches),
+            difficulty: Math.max(1, Math.min(3, gameDifficulty))
         });
         saveUserProgress();
+    } catch (error) {
+        console.error('Failed to save game data:', error);
+        // Continue with game over display even if save fails
     }
+}
     
        setTimeout(() => {
         showGameOverModal(message, gameXP, gameCoins, oldLevel !== userProfile.level, wasNewBest); // Defined in UI module
@@ -308,10 +324,12 @@ function endGameFromPause() {
     document.getElementById('pauseMenuModal').style.display = 'none';
     
     // End the game normally - this will show the game over screen
-    endGame(`Game ended manually. Final score: ${score}`);
+    endGame(`Game ended manually. Final score: ${score}`).catch(console.error);
 }
 
 function returnToMenu() {
+    clearAllIntervals(); // Ensure all intervals are stopped
+    
     document.getElementById('gameScreen').style.display = 'none';
     const menuScreen = document.getElementById('menuScreen');
     menuScreen.style.display = 'flex';
@@ -365,9 +383,7 @@ function changeDifficulty() {
     
     document.getElementById('difficultyDisplay').textContent = ['Easy', 'Normal', 'Hard'][gameDifficulty - 1];
     
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
     
     gameInterval = setInterval(() => {
         updateExposures(); // Defined in markets module
@@ -391,7 +407,7 @@ function handleEscalatingDifficulty() {
     escalationTimer++;
     if (escalationTimer >= gameEndSettings.escalationInterval) {
         // Use difficulty-based escalation amount
-        const escalationAmount = difficulty === 1 ? 0.25 : gameDifficulty === 2 ? 0.5 : 0.75;
+        const escalationAmount = gameDifficulty === 1 ? 0.25 : gameDifficulty === 2 ? 0.5 : 0.75;
         adminSettings.globalVolatilityMultiplier += escalationAmount;
         escalationTimer = 0;
         
@@ -412,15 +428,21 @@ function handleEscalatingDifficulty() {
         notification.textContent = `Market volatility increased! (${adminSettings.globalVolatilityMultiplier.toFixed(1)}x)`;
         document.body.appendChild(notification);
         
-        setTimeout(() => {
+        const cleanupNotification = () => {
             try {
-                if (notification.parentNode) {
+                if (notification && notification.parentNode) {
                     notification.parentNode.removeChild(notification);
                 }
             } catch (e) {
                 // Silently handle case where element was already removed
             }
-        }, 3000);
+            notification = null; // Ensure garbage collection
+        };
+        
+        setTimeout(cleanupNotification, 3000);
+        
+        // Also cleanup on page unload to prevent memory leaks
+        window.addEventListener('beforeunload', cleanupNotification, { once: true });
         
         updateGlobalVolatilityDisplay(); // Defined in UI module
     }
@@ -430,12 +452,12 @@ function handleEscalatingDifficulty() {
 function checkGameEndConditions() {
   
     if (gameEndSettings.enableTimeLimit && gameTime >= gameEndSettings.timeLimitMinutes * 60) {
-        endGame(`Time's up! Final score: ${score}`);
+        endGame(`Time's up! Final score: ${score}`).catch(console.error);
         return true;
     }
     
     if (gameEndSettings.enableMissedTimerLimit && missedTimers >= gameEndSettings.maxMissedTimers) {
-        endGame(`Game Over! You missed ${gameEndSettings.maxMissedTimers} breach timers. Final score: ${score}`);
+        endGame(`Game Over! You missed ${gameEndSettings.maxMissedTimers} breach timers. Final score: ${score}`).catch(console.error);
         return true;
     }
     
@@ -651,3 +673,4 @@ window.toggleGameEndCondition = toggleGameEndCondition;
 window.resetAdminSettings = resetAdminSettings;
 window.formatTime = formatTime;
 window.ensureDefaultDifficulty = ensureDefaultDifficulty;
+window.clearAllIntervals = clearAllIntervals;

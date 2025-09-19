@@ -133,8 +133,8 @@ function updateExposures() {
                 effectiveVolatilityMultiplier *= 0.3;
             }
             
-            const baseVolatility = (difficulty === 3 ? 52 : 45) * effectiveVolatilityMultiplier * adminSettings.globalVolatilityMultiplier;
-            const trendInfluence = (difficulty === 3 ? 0.72 : 0.65) * market.trendStrength;
+            const baseVolatility = (gameDifficulty === 3 ? 52 : 45) * effectiveVolatilityMultiplier * adminSettings.globalVolatilityMultiplier;
+            const trendInfluence = (gameDifficulty === 3 ? 0.72 : 0.65) * market.trendStrength;
             
             const randomComponent = (Math.random() - 0.5) * baseVolatility;
             const trendComponent = market.trend * trendInfluence;

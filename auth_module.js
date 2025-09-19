@@ -21,6 +21,17 @@ let supabase = window.supabase || null;
 let currentUser = window.currentUser || null;
 let isGuestMode = window.isGuestMode || false;
 
+// Auth operation state management
+let authOperationInProgress = false;
+
+function setAuthOperationState(inProgress) {
+    authOperationInProgress = inProgress;
+}
+
+function isAuthOperationInProgress() {
+    return authOperationInProgress;
+}
+
 // Initialize Supabase when the page loads
 function initializeSupabase() {
     try {
@@ -28,6 +39,13 @@ function initializeSupabase() {
             console.log('Supabase credentials not configured, starting in guest mode');
             continueAsGuest();
             initializeEverything(); // This function needs to be defined in the main file
+            return;
+        }
+        
+        if (!window.supabase) {
+            console.error('Supabase library not loaded');
+            continueAsGuest();
+            initializeEverything();
             return;
         }
         
@@ -43,14 +61,23 @@ function initializeSupabase() {
 
 // Check if user is already logged in
 async function checkAuthState() {
-    if (!supabase) {
+    if (!supabase || isAuthOperationInProgress()) {
         continueAsGuest();
         initializeEverything(); // This function needs to be defined in the main file
         return;
     }
     
+    setAuthOperationState(true);
+    
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+            console.error('Auth session error:', error);
+            showAuthScreen(); // This function needs to be defined in UI module
+            return;
+        }
+        
         if (session?.user) {
             currentUser = session.user;
             await loadUserProfile();
@@ -61,6 +88,8 @@ async function checkAuthState() {
     } catch (error) {
         console.error('Auth check failed:', error);
         showAuthScreen(); // This function needs to be defined in UI module
+    } finally {
+        setAuthOperationState(false);
     }
 }
 
@@ -68,11 +97,22 @@ async function checkAuthState() {
 async function handleLogin(event) {
     event.preventDefault();
     
+    if (isAuthOperationInProgress()) {
+        return; // Prevent multiple simultaneous operations
+    }
+    
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     const button = document.getElementById('loginButton');
     const errorDiv = document.getElementById('loginError');
     
+    if (!email || !password) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    setAuthOperationState(true);
     button.disabled = true;
     button.innerHTML = '<span class="loading-spinner"></span>Signing in...';
     errorDiv.style.display = 'none';
@@ -90,9 +130,11 @@ async function handleLogin(event) {
         showMenu(); // This function needs to be defined in UI module
         
     } catch (error) {
-        errorDiv.textContent = error.message;
+        console.error('Login error:', error);
+        errorDiv.textContent = error.message || 'Login failed. Please try again.';
         errorDiv.style.display = 'block';
     } finally {
+        setAuthOperationState(false);
         button.disabled = false;
         button.textContent = 'Sign In';
     }
@@ -100,6 +142,10 @@ async function handleLogin(event) {
 
 async function handleRegister(event) {
     event.preventDefault();
+    
+    if (isAuthOperationInProgress()) {
+        return; // Prevent multiple simultaneous operations
+    }
     
     const email = document.getElementById('registerEmail').value;
     const username = document.getElementById('registerUsername').value;
@@ -112,8 +158,21 @@ async function handleRegister(event) {
     errorDiv.style.display = 'none';
     successDiv.style.display = 'none';
     
+    // Validation
+    if (!email || !username || !password || !confirmPassword) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
     if (password !== confirmPassword) {
         errorDiv.textContent = 'Passwords do not match';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (password.length < 6) {
+        errorDiv.textContent = 'Password must be at least 6 characters';
         errorDiv.style.display = 'block';
         return;
     }
@@ -124,6 +183,7 @@ async function handleRegister(event) {
         return;
     }
     
+    setAuthOperationState(true);
     button.disabled = true;
     button.innerHTML = '<span class="loading-spinner"></span>Creating account...';
     
@@ -150,11 +210,16 @@ async function handleRegister(event) {
             currentUser = data.user;
             
             // Check if username is already taken in profiles table
-            const { data: existingProfile } = await supabase
+            const { data: existingProfile, error: profileCheckError } = await supabase
                 .from('user_profiles')
                 .select('username')
                 .eq('username', username)
                 .single();
+            
+            if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+                // Unexpected error (not "no rows found")
+                console.error('Profile check error:', profileCheckError);
+            }
             
             if (existingProfile) {
                 // Username taken, need to sign out and show error
@@ -167,9 +232,11 @@ async function handleRegister(event) {
         }
         
     } catch (error) {
-        errorDiv.textContent = error.message;
+        console.error('Registration error:', error);
+        errorDiv.textContent = error.message || 'Registration failed. Please try again.';
         errorDiv.style.display = 'block';
     } finally {
+        setAuthOperationState(false);
         button.disabled = false;
         button.textContent = 'Create Account';
     }
@@ -185,61 +252,61 @@ async function handleLogout() {
         showAuthScreen(); // This function needs to be defined in UI module
     } catch (error) {
         console.error('Logout failed:', error);
+        // Force logout even if save failed
+        currentUser = null;
+        isGuestMode = false;
+        userProfile = initializeDefaultProfile();
+        showAuthScreen();
     }
 }
 
 async function createUserProfile(username) {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.error('No current user for profile creation');
+        return;
+    }
     
     // Check if there's saved guest progress
     const savedGuestProgress = sessionStorage.getItem('guestProgress');
     let defaultProfile;
     
     if (savedGuestProgress) {
-        // Use guest progress as starting point
-        const guestData = JSON.parse(savedGuestProgress);
-        defaultProfile = {
-            user_id: currentUser.id,
-            username: username,
-            level: guestData.level,
-            current_xp: guestData.currentXP,
-            total_xp: guestData.totalXP,
-            coins: Math.floor(guestData.coins),
-            games_played: guestData.gamesPlayed,
-            best_score: guestData.bestScore,
-            total_trades: guestData.totalTrades,
-            breaches_fixed: guestData.breachesFixed,
-            wins: guestData.wins,
-            unlocked_assets: guestData.unlockedAssets,
-            powerups: guestData.powerUps
-        };
-        // Clear the temporary storage
-        sessionStorage.removeItem('guestProgress');
+        try {
+            // Use guest progress as starting point
+            const guestData = JSON.parse(savedGuestProgress);
+            defaultProfile = {
+                user_id: currentUser.id,
+                username: username,
+                level: guestData.level || 1,
+                current_xp: guestData.currentXP || 0,
+                total_xp: guestData.totalXP || 0,
+                coins: Math.floor(guestData.coins || 0),
+                games_played: guestData.gamesPlayed || 0,
+                best_score: guestData.bestScore || 0,
+                total_trades: guestData.totalTrades || 0,
+                breaches_fixed: guestData.breachesFixed || 0,
+                wins: guestData.wins || 0,
+                unlocked_assets: guestData.unlockedAssets || ['indices', 'forex', 'commodities'],
+                powerups: guestData.powerUps || {
+                    freezeTimer: 0,
+                    reduceExposures: 0,
+                    marketFreeze: 0,
+                    volatilityShield: 0,
+                    tradingPlaces: 0,
+                    hotVols: 0,
+                    noddingBird: 0
+                }
+            };
+            // Clear the temporary storage
+            sessionStorage.removeItem('guestProgress');
+        } catch (parseError) {
+            console.error('Error parsing guest progress:', parseError);
+            sessionStorage.removeItem('guestProgress');
+            defaultProfile = createDefaultProfileObject(username);
+        }
     } else {
         // Use default fresh profile
-        defaultProfile = {
-            user_id: currentUser.id,
-            username: username,
-            level: 1,
-            current_xp: 0,
-            total_xp: 0,
-            coins: 0,
-            games_played: 0,
-            best_score: 0,
-            total_trades: 0,
-            breaches_fixed: 0,
-            wins: 0,
-            unlocked_assets: ['indices', 'forex', 'commodities'],
-            powerups: {
-                freezeTimer: 0,
-                reduceExposures: 0,
-                marketFreeze: 0,
-                volatilityShield: 0,
-                tradingPlaces: 0,
-                hotVols: 0,
-                noddingBird: 0
-            }
-        };
+        defaultProfile = createDefaultProfileObject(username);
     }
     
     try {
@@ -249,37 +316,72 @@ async function createUserProfile(username) {
         
         if (error) throw error;
         
-        Object.assign(userProfile, defaultProfile);
-        Object.assign(userProfile, defaultProfile);
+        // Update local userProfile
+        Object.assign(userProfile, {
+            username: defaultProfile.username,
+            level: defaultProfile.level,
+            currentXP: defaultProfile.current_xp,
+            totalXP: defaultProfile.total_xp,
+            coins: defaultProfile.coins,
+            gamesPlayed: defaultProfile.games_played,
+            bestScore: defaultProfile.best_score,
+            totalTrades: defaultProfile.total_trades,
+            breachesFixed: defaultProfile.breaches_fixed,
+            wins: defaultProfile.wins,
+            unlockedAssets: defaultProfile.unlocked_assets,
+            powerUps: defaultProfile.powerups
+        });
 
-// Process any level-ups based on transferred XP
-if (userProfile.totalXP > 0) {
-    while (userProfile.currentXP >= generateLevelRequirement(userProfile.level)) {
-        userProfile.currentXP -= generateLevelRequirement(userProfile.level);
-        userProfile.level++;
-        showLevelUp(); // Show level up notification
-        awardCoins(adminSettings.coinRewards.levelUpBonus); // Award level up coins
-    }
-}
+        // Process any level-ups based on transferred XP
+        if (userProfile.totalXP > 0) {
+            while (userProfile.currentXP >= generateLevelRequirement(userProfile.level)) {
+                userProfile.currentXP -= generateLevelRequirement(userProfile.level);
+                userProfile.level++;
+                showLevelUp(); // Show level up notification
+                awardCoins(adminSettings.coinRewards.levelUpBonus); // Award level up coins
+            }
+        }
 
-updateMenuDisplay(); // This function needs to be defined in UI module
-updateProfileDisplay(); // This function needs to be defined in UI module
         updateMenuDisplay(); // This function needs to be defined in UI module
         updateProfileDisplay(); // This function needs to be defined in UI module
         
-        // Sync the menu difficulty with the current game difficulty
-        document.querySelectorAll('.menu-difficulty-pill').forEach(option => {
-            option.classList.remove('active');
-        });
-        document.querySelector(`[data-difficulty="${difficulty}"]`).classList.add('active');
-        
     } catch (error) {
         console.error('Failed to create user profile:', error);
+        throw error; // Re-throw to handle in calling function
     }
 }
 
+function createDefaultProfileObject(username) {
+    return {
+        user_id: currentUser.id,
+        username: username,
+        level: 1,
+        current_xp: 0,
+        total_xp: 0,
+        coins: 0,
+        games_played: 0,
+        best_score: 0,
+        total_trades: 0,
+        breaches_fixed: 0,
+        wins: 0,
+        unlocked_assets: ['indices', 'forex', 'commodities'],
+        powerups: {
+            freezeTimer: 0,
+            reduceExposures: 0,
+            marketFreeze: 0,
+            volatilityShield: 0,
+            tradingPlaces: 0,
+            hotVols: 0,
+            noddingBird: 0
+        }
+    };
+}
+
 async function loadUserProfile() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.error('No current user for profile loading');
+        return;
+    }
     
     try {
         const { data, error } = await supabase
@@ -290,13 +392,14 @@ async function loadUserProfile() {
         
         if (error) {
             if (error.code === 'PGRST116') {
+                // No profile found, create one
                 const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
                 await createUserProfile(username);
             } else {
                 throw error;
             }
         } else if (data) {
-            // Make sure best_score is being loaded
+            // Update local userProfile with database data
             Object.assign(userProfile, {
                 username: data.username,
                 level: data.level,
@@ -330,7 +433,9 @@ async function loadUserProfile() {
 }
 
 async function saveUserProgress() {
-    if (!currentUser || isGuestMode) return;
+    if (!currentUser || isGuestMode || !supabase) {
+        return;
+    }
     
     try {
         const { error } = await supabase
@@ -360,7 +465,9 @@ async function saveUserProgress() {
 }
 
 async function saveGameSession(sessionData) {
-    if (!currentUser || isGuestMode) return;
+    if (!currentUser || isGuestMode || !supabase) {
+        return;
+    }
     
     try {
         console.log("Saving game session with score:", sessionData.score);
@@ -401,7 +508,7 @@ async function saveGameSession(sessionData) {
         console.log("Current DB best score:", currentBestScore, "New score:", sessionData.score);
         
         // Update best_score if this is a new high score
-        if (sessionData.score > (currentBestScore || 0)) {
+        if (sessionData.score > currentBestScore) {
             console.log("Updating best score to", sessionData.score, "from", currentBestScore);
             
             const { error: profileError } = await supabase
@@ -460,7 +567,11 @@ function guestCreateAccount() {
     };
     
     // Store in sessionStorage temporarily
-    sessionStorage.setItem('guestProgress', JSON.stringify(guestProgress));
+    try {
+        sessionStorage.setItem('guestProgress', JSON.stringify(guestProgress));
+    } catch (error) {
+        console.error('Failed to save guest progress:', error);
+    }
     
     // Reset guest mode and show auth screen
     isGuestMode = false;
@@ -499,17 +610,24 @@ setInterval(() => {
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (window.supabase && supabase) {
-            supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_OUT') {
-                    currentUser = null;
-                    isGuestMode = false;
-                    resetToDefaults();
-                    showAuthScreen();
-                } else if (event === 'SIGNED_IN' && session?.user) {
-                    currentUser = session.user;
-                    loadUserProfile().then(() => showMenu());
-                }
-            });
+            try {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_OUT') {
+                        currentUser = null;
+                        isGuestMode = false;
+                        resetToDefaults();
+                        showAuthScreen();
+                    } else if (event === 'SIGNED_IN' && session?.user) {
+                        currentUser = session.user;
+                        loadUserProfile().then(() => showMenu()).catch(error => {
+                            console.error('Failed to load profile after sign in:', error);
+                            continueAsGuest();
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error('Error setting up auth state listener:', error);
+            }
         }
     }, 100);
 });

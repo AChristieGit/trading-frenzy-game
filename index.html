@@ -2903,7 +2903,7 @@ const marketData = window.marketData || {
 };
 
 // Admin settings - scoring, timers, and rewards
-let adminSettings = window.adminSettings || {
+window.adminSettings = window.adminSettings || {
     breachHedgePoints: 25,     
     breachClearBonus: 50,      
     goodTradeBonus: 15,        
@@ -2930,8 +2930,10 @@ let adminSettings = window.adminSettings || {
     }
 };
 
+let adminSettings = window.adminSettings;
+
 // Game end conditions
-let gameEndSettings = window.gameEndSettings || {
+window.gameEndSettings = window.gameEndSettings || {
     enableTimeLimit: false,
     timeLimitMinutes: 5,
     enableMissedTimerLimit: true,
@@ -2941,8 +2943,10 @@ let gameEndSettings = window.gameEndSettings || {
     escalationAmount: 0.5
 };
 
+let gameEndSettings = window.gameEndSettings;
+
 // Power-up states
-let activePowerups = window.activePowerups || {
+window.activePowerups = window.activePowerups || {
     marketFreeze: { active: false, timeLeft: 0, cooldown: 0 },
     volatilityShield: { active: false, timeLeft: 0, cooldown: 0 },
     freezeTimer: { active: false, timeLeft: 0, cooldown: 0 },
@@ -2951,6 +2955,8 @@ let activePowerups = window.activePowerups || {
     hotVols: { active: false, timeLeft: 0, cooldown: 0 },
     noddingBird: { active: false, timeLeft: 0, cooldown: 0 }
 };
+
+let activePowerups = window.activePowerups;
 
 // Global game constants
 const baseGlobalVolatility = 1.0;
@@ -3055,6 +3061,17 @@ let supabase = window.supabase || null;
 let currentUser = window.currentUser || null;
 let isGuestMode = window.isGuestMode || false;
 
+// Auth operation state management
+let authOperationInProgress = false;
+
+function setAuthOperationState(inProgress) {
+    authOperationInProgress = inProgress;
+}
+
+function isAuthOperationInProgress() {
+    return authOperationInProgress;
+}
+
 // Initialize Supabase when the page loads
 function initializeSupabase() {
     try {
@@ -3062,6 +3079,13 @@ function initializeSupabase() {
             console.log('Supabase credentials not configured, starting in guest mode');
             continueAsGuest();
             initializeEverything(); // This function needs to be defined in the main file
+            return;
+        }
+        
+        if (!window.supabase) {
+            console.error('Supabase library not loaded');
+            continueAsGuest();
+            initializeEverything();
             return;
         }
         
@@ -3077,14 +3101,23 @@ function initializeSupabase() {
 
 // Check if user is already logged in
 async function checkAuthState() {
-    if (!supabase) {
+    if (!supabase || isAuthOperationInProgress()) {
         continueAsGuest();
         initializeEverything(); // This function needs to be defined in the main file
         return;
     }
     
+    setAuthOperationState(true);
+    
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+            console.error('Auth session error:', error);
+            showAuthScreen(); // This function needs to be defined in UI module
+            return;
+        }
+        
         if (session?.user) {
             currentUser = session.user;
             await loadUserProfile();
@@ -3095,6 +3128,8 @@ async function checkAuthState() {
     } catch (error) {
         console.error('Auth check failed:', error);
         showAuthScreen(); // This function needs to be defined in UI module
+    } finally {
+        setAuthOperationState(false);
     }
 }
 
@@ -3102,11 +3137,22 @@ async function checkAuthState() {
 async function handleLogin(event) {
     event.preventDefault();
     
+    if (isAuthOperationInProgress()) {
+        return; // Prevent multiple simultaneous operations
+    }
+    
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     const button = document.getElementById('loginButton');
     const errorDiv = document.getElementById('loginError');
     
+    if (!email || !password) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    setAuthOperationState(true);
     button.disabled = true;
     button.innerHTML = '<span class="loading-spinner"></span>Signing in...';
     errorDiv.style.display = 'none';
@@ -3124,9 +3170,11 @@ async function handleLogin(event) {
         showMenu(); // This function needs to be defined in UI module
         
     } catch (error) {
-        errorDiv.textContent = error.message;
+        console.error('Login error:', error);
+        errorDiv.textContent = error.message || 'Login failed. Please try again.';
         errorDiv.style.display = 'block';
     } finally {
+        setAuthOperationState(false);
         button.disabled = false;
         button.textContent = 'Sign In';
     }
@@ -3134,6 +3182,10 @@ async function handleLogin(event) {
 
 async function handleRegister(event) {
     event.preventDefault();
+    
+    if (isAuthOperationInProgress()) {
+        return; // Prevent multiple simultaneous operations
+    }
     
     const email = document.getElementById('registerEmail').value;
     const username = document.getElementById('registerUsername').value;
@@ -3146,8 +3198,21 @@ async function handleRegister(event) {
     errorDiv.style.display = 'none';
     successDiv.style.display = 'none';
     
+    // Validation
+    if (!email || !username || !password || !confirmPassword) {
+        errorDiv.textContent = 'Please fill in all fields';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
     if (password !== confirmPassword) {
         errorDiv.textContent = 'Passwords do not match';
+        errorDiv.style.display = 'block';
+        return;
+    }
+    
+    if (password.length < 6) {
+        errorDiv.textContent = 'Password must be at least 6 characters';
         errorDiv.style.display = 'block';
         return;
     }
@@ -3158,6 +3223,7 @@ async function handleRegister(event) {
         return;
     }
     
+    setAuthOperationState(true);
     button.disabled = true;
     button.innerHTML = '<span class="loading-spinner"></span>Creating account...';
     
@@ -3184,11 +3250,16 @@ async function handleRegister(event) {
             currentUser = data.user;
             
             // Check if username is already taken in profiles table
-            const { data: existingProfile } = await supabase
+            const { data: existingProfile, error: profileCheckError } = await supabase
                 .from('user_profiles')
                 .select('username')
                 .eq('username', username)
                 .single();
+            
+            if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+                // Unexpected error (not "no rows found")
+                console.error('Profile check error:', profileCheckError);
+            }
             
             if (existingProfile) {
                 // Username taken, need to sign out and show error
@@ -3201,9 +3272,11 @@ async function handleRegister(event) {
         }
         
     } catch (error) {
-        errorDiv.textContent = error.message;
+        console.error('Registration error:', error);
+        errorDiv.textContent = error.message || 'Registration failed. Please try again.';
         errorDiv.style.display = 'block';
     } finally {
+        setAuthOperationState(false);
         button.disabled = false;
         button.textContent = 'Create Account';
     }
@@ -3219,61 +3292,61 @@ async function handleLogout() {
         showAuthScreen(); // This function needs to be defined in UI module
     } catch (error) {
         console.error('Logout failed:', error);
+        // Force logout even if save failed
+        currentUser = null;
+        isGuestMode = false;
+        userProfile = initializeDefaultProfile();
+        showAuthScreen();
     }
 }
 
 async function createUserProfile(username) {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.error('No current user for profile creation');
+        return;
+    }
     
     // Check if there's saved guest progress
     const savedGuestProgress = sessionStorage.getItem('guestProgress');
     let defaultProfile;
     
     if (savedGuestProgress) {
-        // Use guest progress as starting point
-        const guestData = JSON.parse(savedGuestProgress);
-        defaultProfile = {
-            user_id: currentUser.id,
-            username: username,
-            level: guestData.level,
-            current_xp: guestData.currentXP,
-            total_xp: guestData.totalXP,
-            coins: Math.floor(guestData.coins),
-            games_played: guestData.gamesPlayed,
-            best_score: guestData.bestScore,
-            total_trades: guestData.totalTrades,
-            breaches_fixed: guestData.breachesFixed,
-            wins: guestData.wins,
-            unlocked_assets: guestData.unlockedAssets,
-            powerups: guestData.powerUps
-        };
-        // Clear the temporary storage
-        sessionStorage.removeItem('guestProgress');
+        try {
+            // Use guest progress as starting point
+            const guestData = JSON.parse(savedGuestProgress);
+            defaultProfile = {
+                user_id: currentUser.id,
+                username: username,
+                level: guestData.level || 1,
+                current_xp: guestData.currentXP || 0,
+                total_xp: guestData.totalXP || 0,
+                coins: Math.floor(guestData.coins || 0),
+                games_played: guestData.gamesPlayed || 0,
+                best_score: guestData.bestScore || 0,
+                total_trades: guestData.totalTrades || 0,
+                breaches_fixed: guestData.breachesFixed || 0,
+                wins: guestData.wins || 0,
+                unlocked_assets: guestData.unlockedAssets || ['indices', 'forex', 'commodities'],
+                powerups: guestData.powerUps || {
+                    freezeTimer: 0,
+                    reduceExposures: 0,
+                    marketFreeze: 0,
+                    volatilityShield: 0,
+                    tradingPlaces: 0,
+                    hotVols: 0,
+                    noddingBird: 0
+                }
+            };
+            // Clear the temporary storage
+            sessionStorage.removeItem('guestProgress');
+        } catch (parseError) {
+            console.error('Error parsing guest progress:', parseError);
+            sessionStorage.removeItem('guestProgress');
+            defaultProfile = createDefaultProfileObject(username);
+        }
     } else {
         // Use default fresh profile
-        defaultProfile = {
-            user_id: currentUser.id,
-            username: username,
-            level: 1,
-            current_xp: 0,
-            total_xp: 0,
-            coins: 0,
-            games_played: 0,
-            best_score: 0,
-            total_trades: 0,
-            breaches_fixed: 0,
-            wins: 0,
-            unlocked_assets: ['indices', 'forex', 'commodities'],
-            powerups: {
-                freezeTimer: 0,
-                reduceExposures: 0,
-                marketFreeze: 0,
-                volatilityShield: 0,
-                tradingPlaces: 0,
-                hotVols: 0,
-                noddingBird: 0
-            }
-        };
+        defaultProfile = createDefaultProfileObject(username);
     }
     
     try {
@@ -3283,37 +3356,72 @@ async function createUserProfile(username) {
         
         if (error) throw error;
         
-        Object.assign(userProfile, defaultProfile);
-        Object.assign(userProfile, defaultProfile);
+        // Update local userProfile
+        Object.assign(userProfile, {
+            username: defaultProfile.username,
+            level: defaultProfile.level,
+            currentXP: defaultProfile.current_xp,
+            totalXP: defaultProfile.total_xp,
+            coins: defaultProfile.coins,
+            gamesPlayed: defaultProfile.games_played,
+            bestScore: defaultProfile.best_score,
+            totalTrades: defaultProfile.total_trades,
+            breachesFixed: defaultProfile.breaches_fixed,
+            wins: defaultProfile.wins,
+            unlockedAssets: defaultProfile.unlocked_assets,
+            powerUps: defaultProfile.powerups
+        });
 
-// Process any level-ups based on transferred XP
-if (userProfile.totalXP > 0) {
-    while (userProfile.currentXP >= generateLevelRequirement(userProfile.level)) {
-        userProfile.currentXP -= generateLevelRequirement(userProfile.level);
-        userProfile.level++;
-        showLevelUp(); // Show level up notification
-        awardCoins(adminSettings.coinRewards.levelUpBonus); // Award level up coins
-    }
-}
+        // Process any level-ups based on transferred XP
+        if (userProfile.totalXP > 0) {
+            while (userProfile.currentXP >= generateLevelRequirement(userProfile.level)) {
+                userProfile.currentXP -= generateLevelRequirement(userProfile.level);
+                userProfile.level++;
+                showLevelUp(); // Show level up notification
+                awardCoins(adminSettings.coinRewards.levelUpBonus); // Award level up coins
+            }
+        }
 
-updateMenuDisplay(); // This function needs to be defined in UI module
-updateProfileDisplay(); // This function needs to be defined in UI module
         updateMenuDisplay(); // This function needs to be defined in UI module
         updateProfileDisplay(); // This function needs to be defined in UI module
         
-        // Sync the menu difficulty with the current game difficulty
-        document.querySelectorAll('.menu-difficulty-pill').forEach(option => {
-            option.classList.remove('active');
-        });
-        document.querySelector(`[data-difficulty="${difficulty}"]`).classList.add('active');
-        
     } catch (error) {
         console.error('Failed to create user profile:', error);
+        throw error; // Re-throw to handle in calling function
     }
 }
 
+function createDefaultProfileObject(username) {
+    return {
+        user_id: currentUser.id,
+        username: username,
+        level: 1,
+        current_xp: 0,
+        total_xp: 0,
+        coins: 0,
+        games_played: 0,
+        best_score: 0,
+        total_trades: 0,
+        breaches_fixed: 0,
+        wins: 0,
+        unlocked_assets: ['indices', 'forex', 'commodities'],
+        powerups: {
+            freezeTimer: 0,
+            reduceExposures: 0,
+            marketFreeze: 0,
+            volatilityShield: 0,
+            tradingPlaces: 0,
+            hotVols: 0,
+            noddingBird: 0
+        }
+    };
+}
+
 async function loadUserProfile() {
-    if (!currentUser) return;
+    if (!currentUser) {
+        console.error('No current user for profile loading');
+        return;
+    }
     
     try {
         const { data, error } = await supabase
@@ -3324,13 +3432,14 @@ async function loadUserProfile() {
         
         if (error) {
             if (error.code === 'PGRST116') {
+                // No profile found, create one
                 const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
                 await createUserProfile(username);
             } else {
                 throw error;
             }
         } else if (data) {
-            // Make sure best_score is being loaded
+            // Update local userProfile with database data
             Object.assign(userProfile, {
                 username: data.username,
                 level: data.level,
@@ -3364,7 +3473,9 @@ async function loadUserProfile() {
 }
 
 async function saveUserProgress() {
-    if (!currentUser || isGuestMode) return;
+    if (!currentUser || isGuestMode || !supabase) {
+        return;
+    }
     
     try {
         const { error } = await supabase
@@ -3394,7 +3505,9 @@ async function saveUserProgress() {
 }
 
 async function saveGameSession(sessionData) {
-    if (!currentUser || isGuestMode) return;
+    if (!currentUser || isGuestMode || !supabase) {
+        return;
+    }
     
     try {
         console.log("Saving game session with score:", sessionData.score);
@@ -3435,7 +3548,7 @@ async function saveGameSession(sessionData) {
         console.log("Current DB best score:", currentBestScore, "New score:", sessionData.score);
         
         // Update best_score if this is a new high score
-        if (sessionData.score > (currentBestScore || 0)) {
+        if (sessionData.score > currentBestScore) {
             console.log("Updating best score to", sessionData.score, "from", currentBestScore);
             
             const { error: profileError } = await supabase
@@ -3494,7 +3607,11 @@ function guestCreateAccount() {
     };
     
     // Store in sessionStorage temporarily
-    sessionStorage.setItem('guestProgress', JSON.stringify(guestProgress));
+    try {
+        sessionStorage.setItem('guestProgress', JSON.stringify(guestProgress));
+    } catch (error) {
+        console.error('Failed to save guest progress:', error);
+    }
     
     // Reset guest mode and show auth screen
     isGuestMode = false;
@@ -3533,17 +3650,24 @@ setInterval(() => {
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (window.supabase && supabase) {
-            supabase.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_OUT') {
-                    currentUser = null;
-                    isGuestMode = false;
-                    resetToDefaults();
-                    showAuthScreen();
-                } else if (event === 'SIGNED_IN' && session?.user) {
-                    currentUser = session.user;
-                    loadUserProfile().then(() => showMenu());
-                }
-            });
+            try {
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_OUT') {
+                        currentUser = null;
+                        isGuestMode = false;
+                        resetToDefaults();
+                        showAuthScreen();
+                    } else if (event === 'SIGNED_IN' && session?.user) {
+                        currentUser = session.user;
+                        loadUserProfile().then(() => showMenu()).catch(error => {
+                            console.error('Failed to load profile after sign in:', error);
+                            continueAsGuest();
+                        });
+                    }
+                });
+            } catch (error) {
+                console.error('Error setting up auth state listener:', error);
+            }
         }
     }, 100);
 });
@@ -3626,6 +3750,22 @@ let hasActiveBreach = window.hasActiveBreach || false;
 let gameInterval = window.gameInterval;
 let timerInterval = window.timerInterval;
 let powerupInterval = window.powerupInterval;
+
+// Centralized interval management
+function clearAllIntervals() {
+    if (gameInterval) {
+        clearInterval(gameInterval);
+        gameInterval = null;
+    }
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    if (powerupInterval) {
+        clearInterval(powerupInterval);
+        powerupInterval = null;
+    }
+}
 
 // Admin panel state
 let showAdminPanel = window.showAdminPanel || false;
@@ -3720,9 +3860,7 @@ markets = marketData[currentAssetClass];
 // Game flow control
 function startGame() {
     // Clear any existing intervals first
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
  
     initializeAllAssetClasses();
     
@@ -3780,9 +3918,7 @@ function startGame() {
         activePowerups[powerupType] = { active: false, timeLeft: 0, cooldown: 0 };
     });
     
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
 
     // Ensure markets is properly initialized for the current asset class
 markets = [...marketData[currentAssetClass]];
@@ -3811,9 +3947,7 @@ markets = [...marketData[currentAssetClass]];
 
 function endGame(message) {
     
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
     
     const gameXP = Math.max(0, Math.floor(score / 10));
     const gameCoins = Math.max(0, Math.floor(score / adminSettings.coinRewards.endGameMultiplier));
@@ -3831,17 +3965,23 @@ function endGame(message) {
         userProfile.wins++;
     }
     
-    // Save game session data
-    if (currentUser && !isGuestMode) {
+// Save game session data with error handling
+if (currentUser && !isGuestMode) {
+    try {
+        validateAndRepairUserProfile(); // Ensure data integrity before saving
         saveGameSession({
-            score: score,
-            duration: gameTime,
-            trades: trades,
-            breaches: breaches,
-            difficulty: gameDifficulty
+            score: Math.max(0, score),
+            duration: Math.max(0, gameTime),
+            trades: Math.max(0, trades),
+            breaches: Math.max(0, breaches),
+            difficulty: Math.max(1, Math.min(3, gameDifficulty))
         });
         saveUserProgress();
+    } catch (error) {
+        console.error('Failed to save game data:', error);
+        // Continue with game over display even if save fails
     }
+}
     
        setTimeout(() => {
         showGameOverModal(message, gameXP, gameCoins, oldLevel !== userProfile.level, wasNewBest); // Defined in UI module
@@ -3879,10 +4019,12 @@ function endGameFromPause() {
     document.getElementById('pauseMenuModal').style.display = 'none';
     
     // End the game normally - this will show the game over screen
-    endGame(`Game ended manually. Final score: ${score}`);
+    endGame(`Game ended manually. Final score: ${score}`).catch(console.error);
 }
 
 function returnToMenu() {
+    clearAllIntervals(); // Ensure all intervals are stopped
+    
     document.getElementById('gameScreen').style.display = 'none';
     const menuScreen = document.getElementById('menuScreen');
     menuScreen.style.display = 'flex';
@@ -3936,9 +4078,7 @@ function changeDifficulty() {
     
     document.getElementById('difficultyDisplay').textContent = ['Easy', 'Normal', 'Hard'][gameDifficulty - 1];
     
-    clearInterval(gameInterval);
-    clearInterval(timerInterval);
-    clearInterval(powerupInterval);
+    clearAllIntervals();
     
     gameInterval = setInterval(() => {
         updateExposures(); // Defined in markets module
@@ -3962,7 +4102,7 @@ function handleEscalatingDifficulty() {
     escalationTimer++;
     if (escalationTimer >= gameEndSettings.escalationInterval) {
         // Use difficulty-based escalation amount
-        const escalationAmount = difficulty === 1 ? 0.25 : gameDifficulty === 2 ? 0.5 : 0.75;
+        const escalationAmount = gameDifficulty === 1 ? 0.25 : gameDifficulty === 2 ? 0.5 : 0.75;
         adminSettings.globalVolatilityMultiplier += escalationAmount;
         escalationTimer = 0;
         
@@ -3983,15 +4123,21 @@ function handleEscalatingDifficulty() {
         notification.textContent = `Market volatility increased! (${adminSettings.globalVolatilityMultiplier.toFixed(1)}x)`;
         document.body.appendChild(notification);
         
-        setTimeout(() => {
+        const cleanupNotification = () => {
             try {
-                if (notification.parentNode) {
+                if (notification && notification.parentNode) {
                     notification.parentNode.removeChild(notification);
                 }
             } catch (e) {
                 // Silently handle case where element was already removed
             }
-        }, 3000);
+            notification = null; // Ensure garbage collection
+        };
+        
+        setTimeout(cleanupNotification, 3000);
+        
+        // Also cleanup on page unload to prevent memory leaks
+        window.addEventListener('beforeunload', cleanupNotification, { once: true });
         
         updateGlobalVolatilityDisplay(); // Defined in UI module
     }
@@ -4001,12 +4147,12 @@ function handleEscalatingDifficulty() {
 function checkGameEndConditions() {
   
     if (gameEndSettings.enableTimeLimit && gameTime >= gameEndSettings.timeLimitMinutes * 60) {
-        endGame(`Time's up! Final score: ${score}`);
+        endGame(`Time's up! Final score: ${score}`).catch(console.error);
         return true;
     }
     
     if (gameEndSettings.enableMissedTimerLimit && missedTimers >= gameEndSettings.maxMissedTimers) {
-        endGame(`Game Over! You missed ${gameEndSettings.maxMissedTimers} breach timers. Final score: ${score}`);
+        endGame(`Game Over! You missed ${gameEndSettings.maxMissedTimers} breach timers. Final score: ${score}`).catch(console.error);
         return true;
     }
     
@@ -4222,6 +4368,7 @@ window.toggleGameEndCondition = toggleGameEndCondition;
 window.resetAdminSettings = resetAdminSettings;
 window.formatTime = formatTime;
 window.ensureDefaultDifficulty = ensureDefaultDifficulty;
+window.clearAllIntervals = clearAllIntervals;
 
 // ===== MARKETS_MODULE MODULE =====
 // ===== MARKET LOGIC MODULE =====
@@ -4359,8 +4506,8 @@ function updateExposures() {
                 effectiveVolatilityMultiplier *= 0.3;
             }
             
-            const baseVolatility = (difficulty === 3 ? 52 : 45) * effectiveVolatilityMultiplier * adminSettings.globalVolatilityMultiplier;
-            const trendInfluence = (difficulty === 3 ? 0.72 : 0.65) * market.trendStrength;
+            const baseVolatility = (gameDifficulty === 3 ? 52 : 45) * effectiveVolatilityMultiplier * adminSettings.globalVolatilityMultiplier;
+            const trendInfluence = (gameDifficulty === 3 ? 0.72 : 0.65) * market.trendStrength;
             
             const randomComponent = (Math.random() - 0.5) * baseVolatility;
             const trendComponent = market.trend * trendInfluence;
@@ -4617,6 +4764,78 @@ function buyMarket(index) {
     updateDisplay(); // Defined in markets module
 }
 
+// Data validation utilities
+function validateNumericInput(value, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = Number(value);
+    if (isNaN(num) || !isFinite(num)) {
+        return { valid: false, error: 'Invalid number' };
+    }
+    if (num < min) {
+        return { valid: false, error: `Value must be at least ${min}` };
+    }
+    if (num > max) {
+        return { valid: false, error: `Value must be at most ${max}` };
+    }
+    return { valid: true, value: num };
+}
+
+function validateUserData(userData) {
+    const errors = [];
+    
+    // Validate level
+    const levelValidation = validateNumericInput(userData.level, 1, 1000);
+    if (!levelValidation.valid) {
+        errors.push(`Level: ${levelValidation.error}`);
+    }
+    
+    // Validate coins
+    const coinsValidation = validateNumericInput(userData.coins, 0, 1000000);
+    if (!coinsValidation.valid) {
+        errors.push(`Coins: ${coinsValidation.error}`);
+    }
+    
+    return errors;
+}
+
+// Data integrity check function
+function validateAndRepairUserProfile() {
+    const errors = validateUserData(userProfile);
+    
+    if (errors.length > 0) {
+        console.warn('User profile validation errors found:', errors);
+        
+        // Auto-repair common issues
+        userProfile.level = Math.max(1, Math.min(1000, Math.floor(userProfile.level) || 1));
+        userProfile.currentXP = Math.max(0, Math.min(100000, Math.floor(userProfile.currentXP) || 0));
+        userProfile.totalXP = Math.max(0, Math.min(10000000, Math.floor(userProfile.totalXP) || 0));
+        userProfile.coins = Math.max(0, Math.min(1000000, Math.floor(userProfile.coins) || 0));
+        userProfile.gamesPlayed = Math.max(0, Math.min(100000, Math.floor(userProfile.gamesPlayed) || 0));
+        userProfile.bestScore = Math.max(0, Math.min(10000000, Math.floor(userProfile.bestScore) || 0));
+        
+        // Ensure arrays are valid
+        if (!Array.isArray(userProfile.unlockedAssets)) {
+            userProfile.unlockedAssets = ['indices', 'forex', 'commodities'];
+        }
+        
+        // Ensure powerUps object is valid
+        if (!userProfile.powerUps || typeof userProfile.powerUps !== 'object') {
+            userProfile.powerUps = {
+                freezeTimer: 0,
+                reduceExposures: 0,
+                marketFreeze: 0,
+                volatilityShield: 0,
+                tradingPlaces: 0,
+                hotVols: 0,
+                noddingBird: 0
+            };
+        }
+        
+        console.log('User profile auto-repaired');
+    }
+    
+    return errors.length === 0;
+}
+
 function sellMarket(index) {
     if (isPaused) {
         alert('Cannot trade while game is paused!');
@@ -4864,7 +5083,9 @@ window.setPlayerLevel = setPlayerLevel;
 window.setPlayerCoins = setPlayerCoins;
 window.unlockAllAssets = unlockAllAssets;
 window.resetProgress = resetProgress;
-
+window.validateUserData = validateUserData;
+window.validateNumericInput = validateNumericInput;
+window.validateAndRepairUserProfile = validateAndRepairUserProfile;
 
 
 
@@ -5195,7 +5416,11 @@ let maxPowerupScrollOffset = 0;
 
 function populateQuickPowerupBar() {
     const container = document.getElementById('powerupIcons');
-    if (!container) return;
+    if (!container) {
+        console.warn('Powerup container not found, retrying...');
+        setTimeout(() => populateQuickPowerupBar(), 100);
+        return;
+    }
     
     // Sort powerups: owned first, then unowned
     const powerupList = [
@@ -5271,17 +5496,61 @@ window.getButtonText = getButtonText;
 // Dependencies: config.js (userProfile, gameEndSettings, adminSettings), gameState.js (score, trades, etc.)
 // Exposes: Screen transitions, display updates, modal management, safe DOM updates
 
+// Enhanced DOM safety utilities
+function waitForElement(selector, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const element = document.querySelector(selector);
+        if (element) {
+            resolve(element);
+            return;
+        }
+        
+        const observer = new MutationObserver((mutations, obs) => {
+            const element = document.querySelector(selector);
+            if (element) {
+                obs.disconnect();
+                resolve(element);
+            }
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        
+        setTimeout(() => {
+            observer.disconnect();
+            reject(new Error(`Element ${selector} not found within ${timeout}ms`));
+        }, timeout);
+    });
+}
+
+function safeElementOperation(selector, operation, fallback = null) {
+    try {
+        const element = document.querySelector(selector);
+        if (element) {
+            return operation(element);
+        } else {
+            console.warn(`Element not found: ${selector}`);
+            return fallback;
+        }
+    } catch (error) {
+        console.error(`Error in DOM operation for ${selector}:`, error);
+        return fallback;
+    }
+}
+
 // Screen transition functions
 function showAuthScreen() {
-    document.getElementById('authScreen').style.display = 'flex';
-    document.getElementById('menuScreen').style.display = 'none';
-    document.getElementById('gameScreen').style.display = 'none';
+    safeElementOperation('#authScreen', el => el.style.display = 'flex');
+    safeElementOperation('#menuScreen', el => el.style.display = 'none');
+    safeElementOperation('#gameScreen', el => el.style.display = 'none');
 }
 
 function showMenu() {
-    document.getElementById('authScreen').style.display = 'none';
-    document.getElementById('menuScreen').style.display = 'flex';
-    document.getElementById('gameScreen').style.display = 'none';
+    safeElementOperation('#authScreen', el => el.style.display = 'none');
+    safeElementOperation('#menuScreen', el => el.style.display = 'flex');
+    safeElementOperation('#gameScreen', el => el.style.display = 'none');
     
     const logoutBtn = document.getElementById('logoutBtn');
     const createAccountBtn = document.getElementById('createAccountBtn');
@@ -5304,17 +5573,34 @@ function showMenu() {
 
 // Safe DOM update functions
 function safeUpdateElement(id, content, property = 'textContent') {
-    const element = document.getElementById(id);
-    if (element) {
-        element[property] = content;
-    }
+    return safeElementOperation(`#${id}`, el => {
+        el[property] = content;
+        return true;
+    }, false);
 }
 
 function safeUpdateStyle(id, property, value) {
-    const element = document.getElementById(id);
-    if (element && element.style) {
-        element.style[property] = value;
-    }
+    return safeElementOperation(`#${id}`, el => {
+        if (el.style) {
+            el.style[property] = value;
+            return true;
+        }
+        return false;
+    }, false);
+}
+
+function safeAddClass(id, className) {
+    return safeElementOperation(`#${id}`, el => {
+        el.classList.add(className);
+        return true;
+    }, false);
+}
+
+function safeRemoveClass(id, className) {
+    return safeElementOperation(`#${id}`, el => {
+        el.classList.remove(className);
+        return true;
+    }, false);
 }
 
 // Profile display functions
@@ -5361,8 +5647,7 @@ function updateStrikesDisplay() {
     const strikesLeft = gameEndSettings.maxMissedTimers - missedTimers;
     
     for (let i = 1; i <= 3; i++) {
-        const strikeIcon = document.getElementById(`strike${i}`);
-        if (strikeIcon) {
+        safeElementOperation(`#strike${i}`, strikeIcon => {
             if (i <= strikesLeft) {
                 strikeIcon.className = 'strike-icon active';
                 if (strikesLeft === 1) {
@@ -5371,7 +5656,7 @@ function updateStrikesDisplay() {
             } else {
                 strikeIcon.className = 'strike-icon lost';
             }
-        }
+        });
     }
 }
 
@@ -5425,16 +5710,17 @@ function showPauseMenu() {
     isPaused = true;
     
     // Update pause menu with current stats
-    document.getElementById('pauseScore').textContent = score;
-    document.getElementById('pauseTime').textContent = `${gameTime}s`;
+    safeUpdateElement('pauseScore', score);
+    safeUpdateElement('pauseTime', `${gameTime}s`);
     
     // Update pause button state
-    const btn = document.getElementById('pauseBtn');
-    btn.textContent = 'Resume';
-    btn.className = 'control-btn paused';
+    safeElementOperation('#pauseBtn', btn => {
+        btn.textContent = 'Resume';
+        btn.className = 'control-btn paused';
+    });
     
     // Show pause menu
-    document.getElementById('pauseMenuModal').style.display = 'flex';
+    safeUpdateStyle('pauseMenuModal', 'display', 'flex');
 }
 
 // Game over modal
@@ -5460,24 +5746,14 @@ function showGameOverModal(message, xpEarned, coinsEarned, leveledUp, newBest) {
     };
     
     Object.keys(elements).forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = elements[id];
-        }
+        safeUpdateElement(id, elements[id]);
     });
     
     // Show level up indicator if applicable
-    const levelUpDiv = document.getElementById('levelUpIndicator');
-    if (levelUpDiv) {
-        levelUpDiv.style.display = leveledUp ? 'flex' : 'none';
-    }
+    safeUpdateStyle('levelUpIndicator', 'display', leveledUp ? 'flex' : 'none');
     
     // Show new best score indicator if applicable
-    const bestScoreDiv = document.getElementById('newBestScore');
-    if (bestScoreDiv) {
-        bestScoreDiv.style.display = newBest ? 'flex' : 'none';
-    }
-    
+    safeUpdateStyle('newBestScore', 'display', newBest ? 'flex' : 'none');
     
     // Force display the modal
     modal.style.display = 'flex';
@@ -5487,93 +5763,93 @@ function showGameOverModal(message, xpEarned, coinsEarned, leveledUp, newBest) {
     modal.style.width = '100%';
     modal.style.height = '100%';
     modal.style.zIndex = '9999';
-    
 }
 
 function closeGameOver() {
-    document.getElementById('gameOverModal').style.display = 'none';
+    safeUpdateStyle('gameOverModal', 'display', 'none');
     returnToMenu(); // Defined in gameState module
 }
 
 function playAgain() {
-    document.getElementById('gameOverModal').style.display = 'none';
+    safeUpdateStyle('gameOverModal', 'display', 'none');
     resetGameState(); // Defined in gameState module
     startGame(); // Defined in gameState module
 }
 
 // Instructions modal
 function showInstructions() {
-    document.getElementById('instructionsModal').style.display = 'flex';
+    safeUpdateStyle('instructionsModal', 'display', 'flex');
 }
 
 function closeInstructions() {
-    document.getElementById('instructionsModal').style.display = 'none';
+    safeUpdateStyle('instructionsModal', 'display', 'none');
 }
 
 // Shop modal and functions
 function showShop() {
-    document.getElementById('shopCoins').textContent = Math.floor(userProfile.coins);
-    document.getElementById('freezeTimerShopCount').textContent = userProfile.powerUps.freezeTimer;
-    document.getElementById('reduceExposuresShopCount').textContent = userProfile.powerUps.reduceExposures;
-    document.getElementById('marketFreezeShopCount').textContent = userProfile.powerUps.marketFreeze;
-    document.getElementById('volatilityShieldShopCount').textContent = userProfile.powerUps.volatilityShield;
-    document.getElementById('tradingPlacesShopCount').textContent = userProfile.powerUps.tradingPlaces;
-    document.getElementById('hotVolsShopCount').textContent = userProfile.powerUps.hotVols;
-    document.getElementById('noddingBirdShopCount').textContent = userProfile.powerUps.noddingBird;
+    safeUpdateElement('shopCoins', Math.floor(userProfile.coins));
+    safeUpdateElement('freezeTimerShopCount', userProfile.powerUps.freezeTimer);
+    safeUpdateElement('reduceExposuresShopCount', userProfile.powerUps.reduceExposures);
+    safeUpdateElement('marketFreezeShopCount', userProfile.powerUps.marketFreeze);
+    safeUpdateElement('volatilityShieldShopCount', userProfile.powerUps.volatilityShield);
+    safeUpdateElement('tradingPlacesShopCount', userProfile.powerUps.tradingPlaces);
+    safeUpdateElement('hotVolsShopCount', userProfile.powerUps.hotVols);
+    safeUpdateElement('noddingBirdShopCount', userProfile.powerUps.noddingBird);
     updateShopAvailability();
-    document.getElementById('shopModal').style.display = 'flex';
+    safeUpdateStyle('shopModal', 'display', 'flex');
 }
 
 function closeShop() {
-    document.getElementById('shopModal').style.display = 'none';
+    safeUpdateStyle('shopModal', 'display', 'none');
 }
 
 function updateShopAvailability() {
     const availableCoins = Math.floor(userProfile.coins);
     
-    const sharesBtn = document.getElementById('buyShares');
-    if (userProfile.unlockedAssets.includes('shares')) {
-        sharesBtn.textContent = 'Owned ✓';
-        sharesBtn.style.background = '#4CAF50';
-        sharesBtn.disabled = true;
-    } else if (userProfile.level < 3) {
-        sharesBtn.textContent = 'Level 3';
-        sharesBtn.style.background = '#666';
-        sharesBtn.disabled = true;
-    } else if (availableCoins < 150) {
-        sharesBtn.textContent = '150 🪙';
-        sharesBtn.style.background = '#666';
-        sharesBtn.disabled = true;
-    } else {
-        sharesBtn.textContent = '150 🪙';
-        sharesBtn.style.background = '#ffd700';
-        sharesBtn.disabled = false;
-    }
+    safeElementOperation('#buyShares', sharesBtn => {
+        if (userProfile.unlockedAssets.includes('shares')) {
+            sharesBtn.textContent = 'Owned ✓';
+            sharesBtn.style.background = '#4CAF50';
+            sharesBtn.disabled = true;
+        } else if (userProfile.level < 3) {
+            sharesBtn.textContent = 'Level 3';
+            sharesBtn.style.background = '#666';
+            sharesBtn.disabled = true;
+        } else if (availableCoins < 150) {
+            sharesBtn.textContent = '150 🪙';
+            sharesBtn.style.background = '#666';
+            sharesBtn.disabled = true;
+        } else {
+            sharesBtn.textContent = '150 🪙';
+            sharesBtn.style.background = '#ffd700';
+            sharesBtn.disabled = false;
+        }
+    });
     
-    const cryptoBtn = document.getElementById('buyCrypto');
-    if (userProfile.unlockedAssets.includes('crypto')) {
-        cryptoBtn.textContent = 'Owned ✓';
-        cryptoBtn.style.background = '#4CAF50';
-        cryptoBtn.disabled = true;
-    } else if (userProfile.level < 5) {
-        cryptoBtn.textContent = 'Level 5';
-        cryptoBtn.style.background = '#666';
-        cryptoBtn.disabled = true;
-    } else if (availableCoins < 300) {
-        cryptoBtn.textContent = '300 🪙';
-        cryptoBtn.style.background = '#666';
-        cryptoBtn.disabled = true;
-    } else {
-        cryptoBtn.textContent = '300 🪙';
-        cryptoBtn.style.background = '#ffd700';
-        cryptoBtn.disabled = false;
-    }
+    safeElementOperation('#buyCrypto', cryptoBtn => {
+        if (userProfile.unlockedAssets.includes('crypto')) {
+            cryptoBtn.textContent = 'Owned ✓';
+            cryptoBtn.style.background = '#4CAF50';
+            cryptoBtn.disabled = true;
+        } else if (userProfile.level < 5) {
+            cryptoBtn.textContent = 'Level 5';
+            cryptoBtn.style.background = '#666';
+            cryptoBtn.disabled = true;
+        } else if (availableCoins < 300) {
+            cryptoBtn.textContent = '300 🪙';
+            cryptoBtn.style.background = '#666';
+            cryptoBtn.disabled = true;
+        } else {
+            cryptoBtn.textContent = '300 🪙';
+            cryptoBtn.style.background = '#ffd700';
+            cryptoBtn.disabled = false;
+        }
+    });
 }
 
 // Admin panel display functions
 function updateGlobalVolatilityDisplay() {
-    const element = document.getElementById('currentGlobalVolatility');
-    if (element) {
+    safeElementOperation('#currentGlobalVolatility', element => {
         element.textContent = adminSettings.globalVolatilityMultiplier.toFixed(1);
         
         // Color coding based on volatility level
@@ -5584,64 +5860,68 @@ function updateGlobalVolatilityDisplay() {
         } else {
             element.style.color = '#ff0000'; // Red for high
         }
-    }
+    });
 }
 
 function loadAdminPanelValues() {
-    // Load scoring system values
-    document.getElementById('breachHedgePoints').value = adminSettings.breachHedgePoints;
-    document.getElementById('breachClearBonus').value = adminSettings.breachClearBonus;
-    document.getElementById('goodTradeBonus').value = adminSettings.goodTradeBonus;
-    document.getElementById('badTradePenalty').value = adminSettings.badTradePenalty;
-    document.getElementById('causeBreachPenalty').value = adminSettings.causeBreachPenalty;
-    document.getElementById('worseBreachPenalty').value = adminSettings.worseBreachPenalty;
-    document.getElementById('timeoutPenalty').value = adminSettings.timeoutPenalty;
+    // Load scoring system values with safe updates
+    const adminSettings = window.adminSettings || {};
+    
+    safeUpdateElement('breachHedgePoints', adminSettings.breachHedgePoints, 'value');
+    safeUpdateElement('breachClearBonus', adminSettings.breachClearBonus, 'value');
+    safeUpdateElement('goodTradeBonus', adminSettings.goodTradeBonus, 'value');
+    safeUpdateElement('badTradePenalty', adminSettings.badTradePenalty, 'value');
+    safeUpdateElement('causeBreachPenalty', adminSettings.causeBreachPenalty, 'value');
+    safeUpdateElement('worseBreachPenalty', adminSettings.worseBreachPenalty, 'value');
+    safeUpdateElement('timeoutPenalty', adminSettings.timeoutPenalty, 'value');
     
     // Load market behavior values
-    document.getElementById('globalVolatilityMultiplier').value = adminSettings.globalVolatilityMultiplier;
-    document.getElementById('breachTimerSeconds').value = adminSettings.breachTimerSeconds;
+    safeUpdateElement('globalVolatilityMultiplier', adminSettings.globalVolatilityMultiplier, 'value');
+    safeUpdateElement('breachTimerSeconds', adminSettings.breachTimerSeconds, 'value');
     
     // Load coin rewards values
-    document.getElementById('goodTradeCoins').value = adminSettings.coinRewards.goodTrade;
-    document.getElementById('breachHedgeCoins').value = adminSettings.coinRewards.breachHedge;
-    document.getElementById('breachClearCoins').value = adminSettings.coinRewards.breachClear;
-    document.getElementById('endGameDivisor').value = adminSettings.coinRewards.endGameMultiplier;
-    document.getElementById('perfectGameCoins').value = adminSettings.coinRewards.perfectGameBonus;
-    document.getElementById('levelUpCoins').value = adminSettings.coinRewards.levelUpBonus;
+    if (adminSettings.coinRewards) {
+        safeUpdateElement('goodTradeCoins', adminSettings.coinRewards.goodTrade, 'value');
+        safeUpdateElement('breachHedgeCoins', adminSettings.coinRewards.breachHedge, 'value');
+        safeUpdateElement('breachClearCoins', adminSettings.coinRewards.breachClear, 'value');
+        safeUpdateElement('endGameDivisor', adminSettings.coinRewards.endGameMultiplier, 'value');
+        safeUpdateElement('perfectGameCoins', adminSettings.coinRewards.perfectGameBonus, 'value');
+        safeUpdateElement('levelUpCoins', adminSettings.coinRewards.levelUpBonus, 'value');
+    }
     
     // Load asset volatility multipliers
-    Object.keys(adminSettings.assetVolatilityMultipliers).forEach(assetClass => {
-        const volInput = document.getElementById(`${assetClass}VolatilityMultiplier`);
-        if (volInput) volInput.value = adminSettings.assetVolatilityMultipliers[assetClass];
-    });
+    if (adminSettings.assetVolatilityMultipliers) {
+        Object.keys(adminSettings.assetVolatilityMultipliers).forEach(assetClass => {
+            safeUpdateElement(`${assetClass}VolatilityMultiplier`, adminSettings.assetVolatilityMultipliers[assetClass], 'value');
+        });
+    }
     
     // Load game end settings
-    document.getElementById('maxMissedTimers').value = gameEndSettings.maxMissedTimers;
-    document.getElementById('timeLimitMinutes').value = gameEndSettings.timeLimitMinutes;
-    document.getElementById('escalationAmount').value = gameEndSettings.escalationAmount;
+    const gameEndSettings = window.gameEndSettings || {};
+    safeUpdateElement('maxMissedTimers', gameEndSettings.maxMissedTimers, 'value');
+    safeUpdateElement('timeLimitMinutes', gameEndSettings.timeLimitMinutes, 'value');
+    safeUpdateElement('escalationAmount', gameEndSettings.escalationAmount, 'value');
     
     updateGameEndButtons();
 }
 
 function updateGameEndButtons() {
-    const missedTimerBtn = document.getElementById('toggleMissedTimer');
-    const timeLimitBtn = document.getElementById('toggleTimeLimit');
-    const escalatingBtn = document.getElementById('toggleEscalating');
+    const gameEndSettings = window.gameEndSettings || {};
     
-    if (missedTimerBtn) {
+    safeElementOperation('#toggleMissedTimer', missedTimerBtn => {
         missedTimerBtn.textContent = `Missed Timer Limit: ${gameEndSettings.enableMissedTimerLimit ? 'ON' : 'OFF'}`;
         missedTimerBtn.style.background = gameEndSettings.enableMissedTimerLimit ? '#4CAF50' : '#666';
-    }
+    });
     
-    if (timeLimitBtn) {
+    safeElementOperation('#toggleTimeLimit', timeLimitBtn => {
         timeLimitBtn.textContent = `Time Limit: ${gameEndSettings.enableTimeLimit ? 'ON' : 'OFF'}`;
         timeLimitBtn.style.background = gameEndSettings.enableTimeLimit ? '#4CAF50' : '#666';
-    }
+    });
     
-    if (escalatingBtn) {
+    safeElementOperation('#toggleEscalating', escalatingBtn => {
         escalatingBtn.textContent = `Escalating: ${gameEndSettings.enableEscalatingDifficulty ? 'ON' : 'OFF'}`;
         escalatingBtn.style.background = gameEndSettings.enableEscalatingDifficulty ? '#4CAF50' : '#666';
-    }
+    });
 }
 
 function updateCareerDisplay() {
@@ -5662,11 +5942,11 @@ function updateCareerDisplay() {
 
 function showCareer() {
     updateCareerDisplay();
-    document.getElementById('careerModal').style.display = 'flex';
+    safeUpdateStyle('careerModal', 'display', 'flex');
 }
 
 function closeCareer() {
-    document.getElementById('careerModal').style.display = 'none';
+    safeUpdateStyle('careerModal', 'display', 'none');
 }
 
 function switchLeaderboardTab(tab) {
@@ -5674,15 +5954,15 @@ function switchLeaderboardTab(tab) {
         btn.classList.remove('active');
     });
     
-    document.getElementById('levelLeaderboard').style.display = 'none';
-    document.getElementById('scoreLeaderboard').style.display = 'none';
+    safeUpdateStyle('levelLeaderboard', 'display', 'none');
+    safeUpdateStyle('scoreLeaderboard', 'display', 'none');
     
     if (tab === 'level') {
-        document.querySelector('.leaderboard-tab-button:first-child').classList.add('active');
-        document.getElementById('levelLeaderboard').style.display = 'block';
+        safeElementOperation('.leaderboard-tab-button:first-child', btn => btn.classList.add('active'));
+        safeUpdateStyle('levelLeaderboard', 'display', 'block');
     } else {
-        document.querySelector('.leaderboard-tab-button:last-child').classList.add('active');
-        document.getElementById('scoreLeaderboard').style.display = 'block';
+        safeElementOperation('.leaderboard-tab-button:last-child', btn => btn.classList.add('active'));
+        safeUpdateStyle('scoreLeaderboard', 'display', 'block');
     }
 }
 
@@ -5691,6 +5971,10 @@ window.showAuthScreen = showAuthScreen;
 window.showMenu = showMenu;
 window.safeUpdateElement = safeUpdateElement;
 window.safeUpdateStyle = safeUpdateStyle;
+window.safeAddClass = safeAddClass;
+window.safeRemoveClass = safeRemoveClass;
+window.safeElementOperation = safeElementOperation;
+window.waitForElement = waitForElement;
 window.updateProfileDisplay = updateProfileDisplay;
 window.updateMenuDisplay = updateMenuDisplay;
 window.updateScore = updateScore;

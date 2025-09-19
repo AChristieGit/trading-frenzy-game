@@ -324,7 +324,11 @@ let maxPowerupScrollOffset = 0;
 
 function populateQuickPowerupBar() {
     const container = document.getElementById('powerupIcons');
-    if (!container) return;
+    if (!container) {
+        console.warn('Powerup container not found, retrying...');
+        setTimeout(() => populateQuickPowerupBar(), 100);
+        return;
+    }
     
     // Sort powerups: owned first, then unowned
     const powerupList = [

@@ -86,14 +86,14 @@ def build_game(template_file="template.html", output_file="index.html"):
     
     # Find the module script tags placeholder - match your exact template format
     module_placeholder = '''<!-- Load modules in dependency order -->
-<script src="config.js"></script>
-<script src="auth.js"></script>
-<script src="gameState.js"></script>
-<script src="markets.js"></script>
-<script src="trading.js"></script>
-<script src="powerups.js"></script>
-<script src="ui.js"></script>
-<script src="stats.js"></script>
+<script src="config_module.js"></script>
+<script src="auth_module.js"></script>
+<script src="gamestate_module.js"></script>
+<script src="markets_module.js"></script>
+<script src="trading_module.js"></script>
+<script src="powerups_module.js"></script>
+<script src="ui_module.js"></script>
+<script src="stats_module.js"></script>
 
 <!-- Main initialization -->
 <script>

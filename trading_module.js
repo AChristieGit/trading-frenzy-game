@@ -53,6 +53,78 @@ function buyMarket(index) {
     updateDisplay(); // Defined in markets module
 }
 
+// Data validation utilities
+function validateNumericInput(value, min = 0, max = Number.MAX_SAFE_INTEGER) {
+    const num = Number(value);
+    if (isNaN(num) || !isFinite(num)) {
+        return { valid: false, error: 'Invalid number' };
+    }
+    if (num < min) {
+        return { valid: false, error: `Value must be at least ${min}` };
+    }
+    if (num > max) {
+        return { valid: false, error: `Value must be at most ${max}` };
+    }
+    return { valid: true, value: num };
+}
+
+function validateUserData(userData) {
+    const errors = [];
+    
+    // Validate level
+    const levelValidation = validateNumericInput(userData.level, 1, 1000);
+    if (!levelValidation.valid) {
+        errors.push(`Level: ${levelValidation.error}`);
+    }
+    
+    // Validate coins
+    const coinsValidation = validateNumericInput(userData.coins, 0, 1000000);
+    if (!coinsValidation.valid) {
+        errors.push(`Coins: ${coinsValidation.error}`);
+    }
+    
+    return errors;
+}
+
+// Data integrity check function
+function validateAndRepairUserProfile() {
+    const errors = validateUserData(userProfile);
+    
+    if (errors.length > 0) {
+        console.warn('User profile validation errors found:', errors);
+        
+        // Auto-repair common issues
+        userProfile.level = Math.max(1, Math.min(1000, Math.floor(userProfile.level) || 1));
+        userProfile.currentXP = Math.max(0, Math.min(100000, Math.floor(userProfile.currentXP) || 0));
+        userProfile.totalXP = Math.max(0, Math.min(10000000, Math.floor(userProfile.totalXP) || 0));
+        userProfile.coins = Math.max(0, Math.min(1000000, Math.floor(userProfile.coins) || 0));
+        userProfile.gamesPlayed = Math.max(0, Math.min(100000, Math.floor(userProfile.gamesPlayed) || 0));
+        userProfile.bestScore = Math.max(0, Math.min(10000000, Math.floor(userProfile.bestScore) || 0));
+        
+        // Ensure arrays are valid
+        if (!Array.isArray(userProfile.unlockedAssets)) {
+            userProfile.unlockedAssets = ['indices', 'forex', 'commodities'];
+        }
+        
+        // Ensure powerUps object is valid
+        if (!userProfile.powerUps || typeof userProfile.powerUps !== 'object') {
+            userProfile.powerUps = {
+                freezeTimer: 0,
+                reduceExposures: 0,
+                marketFreeze: 0,
+                volatilityShield: 0,
+                tradingPlaces: 0,
+                hotVols: 0,
+                noddingBird: 0
+            };
+        }
+        
+        console.log('User profile auto-repaired');
+    }
+    
+    return errors.length === 0;
+}
+
 function sellMarket(index) {
     if (isPaused) {
         alert('Cannot trade while game is paused!');
@@ -300,5 +372,7 @@ window.setPlayerLevel = setPlayerLevel;
 window.setPlayerCoins = setPlayerCoins;
 window.unlockAllAssets = unlockAllAssets;
 window.resetProgress = resetProgress;
-
+window.validateUserData = validateUserData;
+window.validateNumericInput = validateNumericInput;
+window.validateAndRepairUserProfile = validateAndRepairUserProfile;
 

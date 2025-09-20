@@ -120,19 +120,10 @@ function updatePowerupTimers() {
     populateQuickPowerupBar(); // Refresh the quick access bar to update cooldown timers
 }
 
-// Power-up display functions
 function switchToPowerups() {
-    currentView = 'powerups';
-    
-    document.querySelectorAll('.tab-button').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelector('.tab-button.powerups').classList.add('active');
-    
-    document.getElementById('marketsContainer').style.display = 'none';
-    document.getElementById('powerupsContainer').style.display = 'block';
-    
-    updatePowerupsDisplay();
+    // Powerups are now always visible in the compact bar
+    // No need to switch views anymore
+    return;
 }
 
 function updatePowerupsDisplay() {
@@ -330,7 +321,7 @@ function populateQuickPowerupBar() {
         return;
     }
     
-    // Sort powerups: owned first, then unowned
+    // Only show powerups that are owned or active
     const powerupList = [
         { type: 'marketFreeze', icon: '❄️', name: 'Market Freeze' },
         { type: 'volatilityShield', icon: '🛡️', name: 'Volatility Shield' },
@@ -341,28 +332,44 @@ function populateQuickPowerupBar() {
         { type: 'noddingBird', icon: '🦆', name: 'Nodding Bird' }
     ];
     
-    const owned = powerupList.filter(p => userProfile.powerUps[p.type] > 0);
-    const unowned = powerupList.filter(p => userProfile.powerUps[p.type] === 0);
-    const sortedPowerups = [...owned, ...unowned];
+// Show all powerups (will be greyed out if not owned)
+const visiblePowerups = powerupList;
     
-    container.innerHTML = sortedPowerups.map(powerup => {
+    container.innerHTML = visiblePowerups.map(powerup => {
         const count = userProfile.powerUps[powerup.type];
-        const isDisabled = count === 0;
+        const isActive = activePowerups[powerup.type].active;
+        const activeTime = activePowerups[powerup.type].timeLeft;
         const cooldown = activePowerups[powerup.type].cooldown;
-        const cooldownBadge = cooldown > 0 ? `<span class="powerup-cooldown-indicator">${cooldown}</span>` : '';
+        
+        let indicatorClass, indicatorText;
+
+        if (isActive && activeTime > 0) {
+            indicatorClass = 'active';
+            indicatorText = activeTime + 's';
+        } else if (cooldown > 0) {
+            indicatorClass = 'cooldown';
+            indicatorText = cooldown + 's';
+        } else if (count > 0) {
+            indicatorClass = 'available';
+            indicatorText = count;
+        } else {
+            // Don't show indicator for unowned powerups
+            indicatorClass = '';
+            indicatorText = '';
+        }
+        
+        const isDisabled = count === 0 && !isActive && cooldown === 0;
+        const clickAction = isDisabled || cooldown > 0 || isActive ? '' : `usePowerup('${powerup.type}')`;
         
         return `
-            <div class="powerup-icon-quick ${isDisabled ? 'disabled' : ''}" 
-                 onclick="${isDisabled || cooldown > 0 ? '' : `usePowerup('${powerup.type}')`}"
-                 title="${powerup.name}">
-                ${powerup.icon}
-                <span class="powerup-count-quick">${count}</span>
-                ${cooldownBadge}
-            </div>
-        `;
+        <div class="powerup-icon-compact ${isDisabled ? 'disabled' : ''}" 
+             onclick="${clickAction}"
+             title="${powerup.name}">
+            ${powerup.icon}
+            ${indicatorClass ? `<div class="powerup-indicator ${indicatorClass}">${indicatorText}</div>` : ''}
+        </div>
+    `;
     }).join('');
-    
-    updatePowerupScrollButtons();
 }
 
 function updatePowerupScrollButtons() {

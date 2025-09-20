@@ -609,7 +609,7 @@ setInterval(() => {
 // This should be at the end of auth.js
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        if (window.supabase && supabase) {
+        if (window.supabase && supabase && supabase.auth) {
             try {
                 supabase.auth.onAuthStateChange((event, session) => {
                     if (event === 'SIGNED_OUT') {

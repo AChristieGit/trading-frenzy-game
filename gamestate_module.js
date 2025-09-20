@@ -324,7 +324,7 @@ function endGameFromPause() {
     document.getElementById('pauseMenuModal').style.display = 'none';
     
     // End the game normally - this will show the game over screen
-    endGame(`Game ended manually. Final score: ${score}`).catch(console.error);
+    endGame(`Game ended manually. Final score: ${score}`);
 }
 
 function returnToMenu() {
@@ -452,12 +452,12 @@ function handleEscalatingDifficulty() {
 function checkGameEndConditions() {
   
     if (gameEndSettings.enableTimeLimit && gameTime >= gameEndSettings.timeLimitMinutes * 60) {
-        endGame(`Time's up! Final score: ${score}`).catch(console.error);
+        endGame(`Time's up! Final score: ${score}`);
         return true;
     }
     
     if (gameEndSettings.enableMissedTimerLimit && missedTimers >= gameEndSettings.maxMissedTimers) {
-        endGame(`Game Over! You missed ${gameEndSettings.maxMissedTimers} breach timers. Final score: ${score}`).catch(console.error);
+        endGame(`Game Over! You missed ${gameEndSettings.maxMissedTimers} breach timers. Final score: ${score}`);
         return true;
     }
     

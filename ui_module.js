@@ -520,3 +520,4 @@ window.updateCareerDisplay = updateCareerDisplay;
 window.showCareer = showCareer;
 window.closeCareer = closeCareer;
 window.switchLeaderboardTab = switchLeaderboardTab;
+window.updateAdminControls = updateAdminControls;

@@ -247,7 +247,6 @@ function startGame() {
         difficultyDisplay.textContent = ['Easy', 'Normal', 'Hard'][gameDifficulty - 1];
     }
     initializeGame(); // Defined in markets module
-    initializeGame(); // Defined in markets module
     updateAdminControls(); // Update admin button visibility
     populateQuickPowerupBar(); // Initialize quick access powerup bar
     populateQuickPowerupBar(); // Initialize quick access powerup bar

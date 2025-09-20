@@ -75,6 +75,11 @@ function showMenu() {
 
     // Ensure default difficulty shows
     ensureDefaultDifficulty(); // Defined in gameState module
+
+    // Update admin controls visibility
+    updateAdminControls();
+
+
 }
 
 // Safe DOM update functions
@@ -470,6 +475,18 @@ function switchLeaderboardTab(tab) {
         safeElementOperation('.leaderboard-tab-button:last-child', btn => btn.classList.add('active'));
         safeUpdateStyle('scoreLeaderboard', 'display', 'block');
     }
+}
+
+// Admin UI management
+function updateAdminControls() {
+    const isAdmin = isAdminUser(); // Defined in auth module
+    const adminElements = document.querySelectorAll('.admin-only');
+    
+    adminElements.forEach(element => {
+        if (element) {
+            element.style.display = isAdmin ? 'inline-block' : 'none';
+        }
+    });
 }
 
 // Export to global scope

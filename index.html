@@ -2389,7 +2389,7 @@
             </div>
         </div>
         <div class="profile-buttons">
-            <button class="profile-btn" onclick="showPauseMenu()">🏠 Menu</button>
+            <button class="profile-btn" onclick="togglePause()">⏸️ Pause</button>
             <button class="profile-btn" onclick="showShop()">🛒 Shop</button>
             <button class="profile-btn" onclick="showStats()">📊 Stats</button>
             <div class="coins-display" id="coinsDisplay">0 🪙</div>
@@ -2570,12 +2570,12 @@
     </div>
     
     <div class="game-controls">
-        <button class="control-btn" id="pauseBtn" onclick="togglePause()">Pause</button>
-        <button class="control-btn" onclick="resetGame()">Reset</button>
-        <button class="control-btn" onclick="changeDifficulty()">Difficulty: <span id="difficultyDisplay">Normal</span></button>
-        <button class="control-btn admin-btn" onclick="toggleAdminPanel()">Admin</button>
-        <button class="control-btn" onclick="endGame('Test game over')">Test Game Over</button>
-    </div>
+    <button class="control-btn admin-only" id="pauseBtn" onclick="togglePause()" style="display: none;">Pause</button>
+    <button class="control-btn admin-only" onclick="resetGame()" style="display: none;">Reset</button>
+    <button class="control-btn admin-only" onclick="changeDifficulty()" style="display: none;">Difficulty: <span id="difficultyDisplay">Normal</span></button>
+    <button class="control-btn admin-btn admin-only" onclick="toggleAdminPanel()" style="display: none;">Admin</button>
+    <button class="control-btn admin-only" onclick="endGame('Test game over')" style="display: none;">Test Game Over</button>
+</div>
     
     <div class="admin-panel" id="adminPanel" style="display: none;">
         <h2 style="color: #9C27B0; text-align: center; margin-bottom: 20px;">⚙️ Admin Settings</h2>
@@ -3928,7 +3928,7 @@ function startGame() {
     clearAllIntervals();
 
     // Ensure markets is properly initialized for the current asset class
-markets = [...marketData[currentAssetClass]];
+    markets = [...marketData[currentAssetClass]];
     
 
     gameInterval = setInterval(updateExposures, gameSpeed); // updateExposures defined in markets module
@@ -3949,6 +3949,9 @@ markets = [...marketData[currentAssetClass]];
         difficultyDisplay.textContent = ['Easy', 'Normal', 'Hard'][gameDifficulty - 1];
     }
     initializeGame(); // Defined in markets module
+    initializeGame(); // Defined in markets module
+    updateAdminControls(); // Update admin button visibility
+    populateQuickPowerupBar(); // Initialize quick access powerup bar
     populateQuickPowerupBar(); // Initialize quick access powerup bar
 }
 
@@ -4376,6 +4379,7 @@ window.resetAdminSettings = resetAdminSettings;
 window.formatTime = formatTime;
 window.ensureDefaultDifficulty = ensureDefaultDifficulty;
 window.clearAllIntervals = clearAllIntervals;
+window.updateAdminControls = updateAdminControls;
 
 // ===== MARKETS_MODULE MODULE =====
 // ===== MARKET LOGIC MODULE =====
@@ -5576,6 +5580,11 @@ function showMenu() {
 
     // Ensure default difficulty shows
     ensureDefaultDifficulty(); // Defined in gameState module
+
+    // Update admin controls visibility
+    updateAdminControls();
+
+
 }
 
 // Safe DOM update functions
@@ -5971,6 +5980,18 @@ function switchLeaderboardTab(tab) {
         safeElementOperation('.leaderboard-tab-button:last-child', btn => btn.classList.add('active'));
         safeUpdateStyle('scoreLeaderboard', 'display', 'block');
     }
+}
+
+// Admin UI management
+function updateAdminControls() {
+    const isAdmin = isAdminUser(); // Defined in auth module
+    const adminElements = document.querySelectorAll('.admin-only');
+    
+    adminElements.forEach(element => {
+        if (element) {
+            element.style.display = isAdmin ? 'inline-block' : 'none';
+        }
+    });
 }
 
 // Export to global scope

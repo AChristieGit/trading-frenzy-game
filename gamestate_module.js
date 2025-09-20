@@ -226,7 +226,7 @@ function startGame() {
     clearAllIntervals();
 
     // Ensure markets is properly initialized for the current asset class
-markets = [...marketData[currentAssetClass]];
+    markets = [...marketData[currentAssetClass]];
     
 
     gameInterval = setInterval(updateExposures, gameSpeed); // updateExposures defined in markets module
@@ -247,6 +247,9 @@ markets = [...marketData[currentAssetClass]];
         difficultyDisplay.textContent = ['Easy', 'Normal', 'Hard'][gameDifficulty - 1];
     }
     initializeGame(); // Defined in markets module
+    initializeGame(); // Defined in markets module
+    updateAdminControls(); // Update admin button visibility
+    populateQuickPowerupBar(); // Initialize quick access powerup bar
     populateQuickPowerupBar(); // Initialize quick access powerup bar
 }
 
@@ -674,3 +677,4 @@ window.resetAdminSettings = resetAdminSettings;
 window.formatTime = formatTime;
 window.ensureDefaultDifficulty = ensureDefaultDifficulty;
 window.clearAllIntervals = clearAllIntervals;
+window.updateAdminControls = updateAdminControls;

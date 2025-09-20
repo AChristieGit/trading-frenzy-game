@@ -4113,7 +4113,7 @@ function handleEscalatingDifficulty() {
         adminSettings.globalVolatilityMultiplier += escalationAmount;
         escalationTimer = 0;
         
-        const notification = document.createElement('div');
+        let notification = document.createElement('div');
         notification.style.cssText = `
             position: fixed;
             top: 20px;

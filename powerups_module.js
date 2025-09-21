@@ -116,7 +116,6 @@ function updatePowerupTimers() {
     if (currentView === 'powerups') {
         updatePowerupsDisplay();
     }
-    updateGlobalEffectsBar();
     populateQuickPowerupBar(); // Refresh the quick access bar to update cooldown timers
 }
 
@@ -178,9 +177,7 @@ function updatePowerupsDisplay() {
                 statusDiv.style.color = '#888';
             }
         }
-    });
-    
-    updateGlobalEffectsBar();
+    }); // Fixed: Removed the extra closing brace and semicolon
 }
 
 function updateGlobalEffectsBar() {
@@ -372,24 +369,10 @@ const visiblePowerups = powerupList;
     }).join('');
 }
 
-function updatePowerupScrollButtons() {
-    const effectsSection = document.getElementById('effectsSection');
-    
-    // Check if any effects are active
-    const hasActiveEffects = Object.keys(activePowerups).some(type => activePowerups[type].active);
-    
-    if (hasActiveEffects) {
-        effectsSection.classList.remove('hidden');
-    } else {
-        effectsSection.classList.add('hidden');
-    }
-    
-    // Don't call populateQuickPowerupBar() here to avoid infinite loop
-}
 
 // Export new functions
 window.populateQuickPowerupBar = populateQuickPowerupBar;
-window.updatePowerupScrollButtons = updatePowerupScrollButtons;
+
 
 
 // Export to global scope

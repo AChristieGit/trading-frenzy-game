@@ -5638,9 +5638,9 @@ function updateMenuDisplay() {
 function updateScore() {
     safeUpdateElement('score', score);
     safeUpdateElement('trades', trades);
-    safeUpdateElement('breaches', breaches);
     safeUpdateElement('time', gameTime);
-    safeUpdateElement('difficulty', ['Easy', 'Normal', 'Hard'][gameDifficulty - 1]);
+    // breaches and difficulty elements were removed in compact layout
+    // Keep the function calls but don't try to update non-existent elements
 }
 
 // Strikes display (lives remaining)

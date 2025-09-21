@@ -7,14 +7,24 @@
     <script>
     // Only load MonetAg ads when running on live domain  
     if (window.location.hostname === 'tradingfrenzy.co.uk') {
-        var script = document.createElement('script');
-        script.src = 'https://eechicha.com/act/files/tag.min.js?z=9905327';
-        script.setAttribute('data-cfasync', 'false');
-        script.async = true;
-        script.onerror = function() { console.log('MonetAg failed to load'); };
-        script.onload = function() { console.log('MonetAg loaded successfully'); };
-        document.head.appendChild(script);
-    } else {
+    var script = document.createElement('script');
+    script.src = 'https://eechicha.com/act/files/tag.min.js?z=9905327';
+    script.setAttribute('data-cfasync', 'false');
+    script.async = true;
+    script.onerror = function() { 
+        console.log('MonetAg failed to load - ad network may be down or blocked'); 
+    };
+    script.onload = function() { console.log('MonetAg loaded successfully'); };
+    
+    // Add timeout fallback
+    setTimeout(function() {
+        if (!script.onload.called) {
+            console.log('MonetAg script timeout - network issues likely');
+        }
+    }, 10000);
+    
+    document.head.appendChild(script);
+} else {
         console.log('Running locally - ads disabled to prevent crashes');
     }
     </script>

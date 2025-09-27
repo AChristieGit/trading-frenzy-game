@@ -857,6 +857,17 @@
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
 }
+
+#vixDisplay {
+    transition: color 0.3s ease;
+    font-weight: bold;
+}
+
+.vix-low { color: #00ff00; }      /* Green: 10-20 */
+.vix-normal { color: #ffff00; }   /* Yellow: 20-30 */
+.vix-high { color: #ff9800; }     /* Orange: 30-40 */
+.vix-extreme { color: #ff0000; }  /* Red: 40+ */
+.vix-powerup { color: #ff00ff; }  /* Purple: affected by powerup */
         
         .powerups-container {
             background: rgba(156,39,176,0.2);
@@ -1647,6 +1658,26 @@
     font-weight: bold;
 }
 
+.center-section {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    justify-content: center;
+    flex: 1;
+}
+
+.game-info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    padding: 8px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    height: 50px;
+    gap: 20px;
+}
+
         
         @keyframes freeze-pulse {
             0%, 100% { transform: scale(1); }
@@ -1872,7 +1903,11 @@
     padding: 5px 0;
 }
 
-
+#vixDifficultyFilter option {
+    background: rgba(0,0,0,0.9);
+    color: white;
+    border: none;
+}
 
 
 .powerup-icon-quick:hover {
@@ -2095,6 +2130,9 @@
             <button class="leaderboard-tab-button" onclick="switchLeaderboardTab('score')">
                 🌟 Top Scores
             </button>
+            <button class="leaderboard-tab-button" onclick="switchLeaderboardTab('vix')">
+                📈 Highest VIX
+            </button>
         </div>
         
         <div class="modal-scrollable">
@@ -2104,6 +2142,22 @@
             
             <div id="scoreLeaderboard" class="leaderboard-content" style="display: none;">
                 <div style="color: #888; text-align: center; padding: 20px;">Loading...</div>
+            </div>
+            
+            <div id="vixLeaderboard" class="leaderboard-content" style="display: none;">
+                <!-- Difficulty filter -->
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <label style="color: #ffffff; margin-right: 10px;">Filter by difficulty:</label>
+                    <select id="vixDifficultyFilter" onchange="loadVixLeaderboard()" style="background: rgba(0,0,0,0.6); color: white; border: 1px solid rgba(255,255,255,0.3); padding: 5px; border-radius: 4px;">
+                        <option value="all">All Difficulties</option>
+                        <option value="1">Easy</option>
+                        <option value="2">Normal</option>
+                        <option value="3" selected>Hard</option>
+                    </select>
+                </div>
+                <div id="vixLeaderboardData">
+                    <div style="color: #888; text-align: center; padding: 20px;">Loading...</div>
+                </div>
             </div>
         </div>
         
@@ -2411,26 +2465,30 @@
     
 
     <div class="game-info-bar">
-    <div class="score-section">
-        <div class="score-item">Score: <span id="score">0</span></div>
-        <div class="score-item">Trades: <span id="trades">0</span></div>
-        <div class="score-item">Time: <span id="time">0</span>s</div>
-        <div class="score-item">
-            <span id="strikesDisplay">
-                <span class="strike-icon active" id="strike1">❤️</span>
-                <span class="strike-icon active" id="strike2">❤️</span>
-                <span class="strike-icon active" id="strike3">❤️</span>
-            </span>
+        <div class="score-section">
+            <div class="score-item">Score: <span id="score">0</span></div>
+            <div class="score-item">Trades: <span id="trades">0</span></div>
+            <div class="score-item">Time: <span id="time">0</span>s</div>
+        </div>
+        
+        <div class="center-section">
+            <div class="score-item">VIX: <span id="vixDisplay">10.0</span></div>
+            <div class="score-item">
+                <span id="strikesDisplay">
+                    <span class="strike-icon active" id="strike1">❤️</span>
+                    <span class="strike-icon active" id="strike2">❤️</span>
+                    <span class="strike-icon active" id="strike3">❤️</span>
+                </span>
+            </div>
+        </div>
+        
+        <div class="powerups-section">
+            <div class="powerups-label">POWERUPS:</div>
+            <div class="powerup-icons-compact" id="powerupIcons">
+                <!-- Powerups will be populated by JavaScript -->
+            </div>
         </div>
     </div>
-    
-    <div class="powerups-section">
-        <div class="powerups-label">POWERUPS:</div>
-        <div class="powerup-icons-compact" id="powerupIcons">
-            <!-- Powerups will be populated by JavaScript -->
-        </div>
-    </div>
-</div>
 
 <div class="asset-tabs">
     <button class="tab-button active" onclick="switchAssetClass('indices')">

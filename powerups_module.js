@@ -63,17 +63,15 @@ function usePowerup(powerupType) {
             powerup.cooldown = 90;
             break;
             
-        case 'hotVols':
-            powerup.active = true;
-            powerup.timeLeft = 30;
-            powerup.cooldown = 45;
-            // Store original volatility to restore later
-            if (!window.originalGlobalVolatility) {
-                window.originalGlobalVolatility = adminSettings.globalVolatilityMultiplier;
-            }
-            adminSettings.globalVolatilityMultiplier *= 2;
-            updateGlobalVolatilityDisplay(); // Defined in UI module
-            break;
+            case 'hotVols':
+                powerup.active = true;
+                powerup.timeLeft = 30;
+                powerup.cooldown = 45;
+                // Simply double current volatility (no need to store original)
+                adminSettings.globalVolatilityMultiplier *= 2;
+                updateGlobalVolatilityDisplay();
+                updateScore(); // Update VIX display immediately
+                break;
             
         case 'noddingBird':
             powerup.active = true;
@@ -96,13 +94,14 @@ function updatePowerupTimers() {
         const powerup = activePowerups[powerupType];
         
         // Handle Hot Vols expiration
-        if (powerupType === 'hotVols' && powerup.active && powerup.timeLeft === 1) {
-            // Restore original volatility when Hot Vols expires
-            if (window.originalGlobalVolatility) {
-                adminSettings.globalVolatilityMultiplier = window.originalGlobalVolatility;
-                updateGlobalVolatilityDisplay(); // Defined in UI module
-                delete window.originalGlobalVolatility;
-            }
+// Handle Hot Vols expiration
+if (powerupType === 'hotVols' && powerup.active && powerup.timeLeft === 1) {
+    // Halve the current volatility instead of restoring original
+    adminSettings.globalVolatilityMultiplier = adminSettings.globalVolatilityMultiplier / 2;
+    updateGlobalVolatilityDisplay();
+    updateScore(); // Update VIX display
+    delete window.originalGlobalVolatility; // Clean up
+
         }
         
         if (powerup.timeLeft > 0) {
@@ -120,7 +119,8 @@ function updatePowerupTimers() {
     if (currentView === 'powerups') {
         updatePowerupsDisplay();
     }
-    populateQuickPowerupBar(); // Refresh the quick access bar to update cooldown timers
+    populateQuickPowerupBar();
+    updateScore(); // Add this to update VIX display every second
 }
 
 function switchToPowerups() {

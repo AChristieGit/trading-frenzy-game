@@ -76,14 +76,100 @@ function switchLeaderboardTab(tab) {
     // Hide all content
     document.getElementById('levelLeaderboard').style.display = 'none';
     document.getElementById('scoreLeaderboard').style.display = 'none';
+    document.getElementById('vixLeaderboard').style.display = 'none';
     
     // Show selected tab
     if (tab === 'level') {
         document.querySelector('.leaderboard-tab-button:first-child').classList.add('active');
         document.getElementById('levelLeaderboard').style.display = 'block';
-    } else {
-        document.querySelector('.leaderboard-tab-button:last-child').classList.add('active');
+    } else if (tab === 'score') {
+        document.querySelector('.leaderboard-tab-button:nth-child(2)').classList.add('active');
         document.getElementById('scoreLeaderboard').style.display = 'block';
+    } else if (tab === 'vix') {
+        document.querySelector('.leaderboard-tab-button:nth-child(3)').classList.add('active');
+        document.getElementById('vixLeaderboard').style.display = 'block';
+        loadVixLeaderboard(); // Load VIX data when tab is opened
+    }
+}
+
+async function loadVixLeaderboard() {
+    const vixDataDiv = document.getElementById('vixLeaderboardData');
+    const difficultyFilter = document.getElementById('vixDifficultyFilter').value;
+    
+    if (!supabase) {
+        vixDataDiv.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Leaderboards not available in guest mode</div>';
+        return;
+    }
+    
+    try {
+        console.log('Fetching VIX leaderboard...');
+        
+        // First get the top VIX records
+        let sessionQuery = supabase
+            .from('game_sessions')
+            .select('user_id, max_vix_survived, difficulty')
+            .gt('max_vix_survived', 10.0)
+            .order('max_vix_survived', { ascending: false })
+            .limit(10);
+        
+        if (difficultyFilter !== 'all') {
+            sessionQuery = sessionQuery.eq('difficulty', parseInt(difficultyFilter));
+        }
+        
+        const { data: sessions, error: sessionError } = await sessionQuery;
+        
+        if (sessionError) throw sessionError;
+        
+        if (!sessions || sessions.length === 0) {
+            vixDataDiv.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">No VIX records found</div>';
+            return;
+        }
+        
+        // Get user details for these sessions
+        const userIds = [...new Set(sessions.map(s => s.user_id))];
+        const { data: users, error: userError } = await supabase
+            .from('user_profiles')
+            .select('user_id, username')
+            .in('user_id', userIds);
+        
+        if (userError) throw userError;
+        
+        // Create a lookup map for usernames
+        const userMap = {};
+        users.forEach(user => {
+            userMap[user.user_id] = user.username;
+        });
+        
+        // Build the leaderboard display
+        vixDataDiv.innerHTML = sessions.map((session, index) => {
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`;
+            const isCurrentUser = currentUser && session.user_id === currentUser.id;
+            const highlightStyle = isCurrentUser ? 'background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3);' : '';
+            const difficultyName = ['Easy', 'Normal', 'Hard'][session.difficulty - 1];
+            const username = userMap[session.user_id] || 'Unknown User';
+            
+            return `
+                <div style="margin-bottom: 10px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; ${highlightStyle}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #ffffff; font-size: 14px;">
+                                ${medal} ${username}
+                                ${isCurrentUser ? ' (You)' : ''}
+                            </strong><br>
+                            <small style="color: #888;">${difficultyName} Difficulty</small>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="color: #ff9800; font-weight: bold; font-size: 16px;">VIX ${session.max_vix_survived.toFixed(1)}</span><br>
+                            <small style="color: #888;">survived</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Failed to load VIX leaderboard:', error);
+        vixDataDiv.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Failed to load leaderboard</div>';
     }
 }
 
@@ -260,3 +346,5 @@ window.switchLeaderboardTab = switchLeaderboardTab;
 window.loadLevelLeaderboard = loadLevelLeaderboard;
 window.loadScoreLeaderboard = loadScoreLeaderboard;
 window.closeLeaderboard = closeLeaderboard;
+window.loadVixLeaderboard = loadVixLeaderboard;
+window.maxVixSurvived = maxVixSurvived;

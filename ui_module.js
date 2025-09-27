@@ -149,8 +149,44 @@ function updateScore() {
     safeUpdateElement('score', score);
     safeUpdateElement('trades', trades);
     safeUpdateElement('time', gameTime);
-    // breaches and difficulty elements were removed in compact layout
-    // Keep the function calls but don't try to update non-existent elements
+    
+    // Calculate effective volatility accounting for powerups
+    let effectiveVolatility = adminSettings.globalVolatilityMultiplier;
+    
+    // Volatility Shield reduces volatility by 70%
+    if (activePowerups.volatilityShield.active) {
+        effectiveVolatility *= 0.3; // 30% of original = 70% reduction
+    }
+    
+    // Display VIX-style volatility with color coding
+    const vixValue = (effectiveVolatility * 10).toFixed(1);
+    const vixElement = document.getElementById('vixDisplay');
+    
+    if (vixElement) {
+        vixElement.textContent = vixValue;
+        
+        // Remove all VIX classes first
+        vixElement.className = vixElement.className.replace(/vix-\w+/g, '');
+        
+        // Check if affected by powerups
+        const isAffectedByPowerup = activePowerups.hotVols.active || activePowerups.volatilityShield.active;
+        
+        if (isAffectedByPowerup) {
+            vixElement.classList.add('vix-powerup');
+        } else {
+            // Add color coding based on VIX level
+            const vixNum = parseFloat(vixValue);
+            if (vixNum < 20) {
+                vixElement.classList.add('vix-low');
+            } else if (vixNum < 30) {
+                vixElement.classList.add('vix-normal');
+            } else if (vixNum < 40) {
+                vixElement.classList.add('vix-high');
+            } else {
+                vixElement.classList.add('vix-extreme');
+            }
+        }
+    }
 }
 
 // Strikes display (lives remaining)

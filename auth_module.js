@@ -554,6 +554,7 @@ async function saveGameSession(sessionData) {
                 trades: sessionData.trades,
                 breaches: sessionData.breaches,
                 difficulty: sessionData.difficulty,
+                max_vix_survived: maxVixSurvived,  // Add this line
                 created_at: new Date().toISOString()
             }]);
         

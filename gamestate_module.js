@@ -15,6 +15,7 @@ let gameTime = window.gameTime || 0;
 let missedTimers = window.missedTimers || 0;
 let escalationTimer = window.escalationTimer || 0;
 let sessionBreachesFixed = window.sessionBreachesFixed || 0;
+let maxVixSurvived = window.maxVixSurvived || 10.0;
 
 // Game control variables
 let isPaused = window.isPaused || false;
@@ -256,6 +257,7 @@ function startGame() {
     missedTimers = 0;
     escalationTimer = 0;
     sessionBreachesFixed = 0;
+    maxVixSurvived = 10.0;
     isPaused = false; // Reset pause state
     adminSettings.globalVolatilityMultiplier = baseGlobalVolatility;
     updateGlobalVolatilityDisplay(); // Defined in UI module
@@ -491,6 +493,11 @@ function handleEscalatingDifficulty() {
         const escalationAmount = gameDifficulty === 1 ? 0.25 : gameDifficulty === 2 ? 0.5 : 0.75;
         adminSettings.globalVolatilityMultiplier += escalationAmount;
         escalationTimer = 0;
+
+        const baseVix = adminSettings.globalVolatilityMultiplier * 10;
+        if (baseVix > maxVixSurvived) {
+            maxVixSurvived = baseVix;
+        }
         
         let notification = document.createElement('div');
         notification.style.cssText = `
@@ -726,6 +733,23 @@ function cleanupAllNotifications() {
         window.gameNotificationCleanups = [];
     }
 }
+
+// Handle tab visibility changes to prevent blank screen
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // Tab is hidden - optionally pause game
+        console.log('Tab hidden');
+    } else {
+        // Tab is visible again - refresh display
+        console.log('Tab visible again');
+        setTimeout(() => {
+            if (currentView === 'markets' && markets.length > 0) {
+                updateDisplay();
+                updateScore();
+            }
+        }, 100);
+    }
+});
 
 // Export to global scope to prevent redeclaration conflicts
 window.currentAssetClass = currentAssetClass;

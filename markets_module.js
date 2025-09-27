@@ -34,6 +34,8 @@ function initializeGame() {
     if (!markets || markets.length === 0) {
         markets = [...marketData[currentAssetClass]];
     }
+
+    clearMarketElementCache();
     
     markets.forEach(market => {
         if (market.exposure === 0 && market.trend === 0) {
@@ -60,56 +62,70 @@ function getBarColor(exposure, limit) {
     return 'green';
 }
 
+// Cache for DOM elements to avoid repeated queries
+let marketElementCache = {};
+
 function updateDisplay() {
     markets.forEach((market, index) => {
-        const bar = document.getElementById(`bar-${index}`);
-        const exposureDisplay = document.getElementById(`exposure-${index}`);
-        const marketRow = document.getElementById(`market-${index}`);
-        const countdown = document.getElementById(`countdown-${index}`);
+        // Use cached elements or query once and cache
+        if (!marketElementCache[index]) {
+            marketElementCache[index] = {
+                bar: document.getElementById(`bar-${index}`),
+                exposureDisplay: document.getElementById(`exposure-${index}`),
+                marketRow: document.getElementById(`market-${index}`),
+                countdown: document.getElementById(`countdown-${index}`),
+                timerText: document.getElementById(`timer-${index}`),
+                circle: document.getElementById(`circle-${index}`)
+            };
+        }
         
-        if (!bar) return;
+        const elements = marketElementCache[index];
+        if (!elements.bar) return;
         
         const exposurePercent = Math.min(40, Math.abs(market.exposure) / market.limit * 40);
         const isLong = market.exposure >= 0;
         const barColor = getBarColor(market.exposure, market.limit);
         
-        bar.className = `exposure-bar ${isLong ? 'long' : 'short'} ${barColor}`;
-        bar.style.width = exposurePercent + '%';
+        elements.bar.className = `exposure-bar ${isLong ? 'long' : 'short'} ${barColor}`;
+        elements.bar.style.width = exposurePercent + '%';
         
-        exposureDisplay.textContent = Math.round(market.exposure);
-        exposureDisplay.style.color = barColor === 'white' ? '#ffffff' : '#ffeb3b';
+        elements.exposureDisplay.textContent = Math.round(market.exposure);
+        elements.exposureDisplay.style.color = barColor === 'white' ? '#ffffff' : '#ffeb3b';
         
         const isBreached = Math.abs(market.exposure) >= market.limit;
         const isCritical = Math.abs(market.exposure) >= market.limit * 1.5;
         
-        marketRow.className = 'market-row';
+        elements.marketRow.className = 'market-row';
         if (activePowerups.marketFreeze.active) {
-            marketRow.classList.add('market-frozen');
+            elements.marketRow.classList.add('market-frozen');
         }
         if (activePowerups.volatilityShield.active) {
-            marketRow.classList.add('volatility-shielded');
+            elements.marketRow.classList.add('volatility-shielded');
         }
         if (isCritical) {
-            marketRow.classList.add('critical-warning');
+            elements.marketRow.classList.add('critical-warning');
         } else if (isBreached) {
-            marketRow.classList.add('warning');
+            elements.marketRow.classList.add('warning');
         }
         
         if (isBreached && individualBreachTimers[index] > 0 && !activePowerups.freezeTimer.active) {
-            countdown.style.display = 'block';
-            const timerText = document.getElementById(`timer-${index}`);
-            const circle = document.getElementById(`circle-${index}`);
+            elements.countdown.style.display = 'block';
             const timeLeft = individualBreachTimers[index];
-            timerText.textContent = Math.max(0, timeLeft);
+            elements.timerText.textContent = Math.max(0, timeLeft);
             
             const progress = (timeLeft / adminSettings.breachTimerSeconds) * 360;
-            circle.style.setProperty('--progress', `${progress}deg`);
+            elements.circle.style.setProperty('--progress', `${progress}deg`);
         } else {
-            countdown.style.display = 'none';
+            elements.countdown.style.display = 'none';
         }
     });
     
     updateBreachBadges();
+}
+
+// Clear cache when markets are reinitialized
+function clearMarketElementCache() {
+    marketElementCache = {};
 }
 
 // Market exposure update engine

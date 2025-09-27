@@ -310,6 +310,10 @@ function getButtonText(powerupType) {
 let powerupScrollOffset = 0;
 let maxPowerupScrollOffset = 0;
 
+// Cache for powerup elements
+let powerupElementCache = {};
+let powerupBarInitialized = false;
+
 function populateQuickPowerupBar() {
     const container = document.getElementById('powerupIcons');
     if (!container) {
@@ -318,7 +322,6 @@ function populateQuickPowerupBar() {
         return;
     }
     
-    // Only show powerups that are owned or active
     const powerupList = [
         { type: 'marketFreeze', icon: '❄️', name: 'Market Freeze' },
         { type: 'volatilityShield', icon: '🛡️', name: 'Volatility Shield' },
@@ -329,17 +332,48 @@ function populateQuickPowerupBar() {
         { type: 'noddingBird', icon: '🦆', name: 'Nodding Bird' }
     ];
     
-// Show all powerups (will be greyed out if not owned)
-const visiblePowerups = powerupList;
+    // Initialize HTML structure only once
+    if (!powerupBarInitialized) {
+        container.innerHTML = powerupList.map(powerup => `
+            <div class="powerup-icon-compact" id="powerup-${powerup.type}" title="${powerup.name}">
+                ${powerup.icon}
+                <div class="powerup-indicator" id="indicator-${powerup.type}" style="display: none;"></div>
+            </div>
+        `).join('');
+        
+        // Cache all elements
+        powerupList.forEach(powerup => {
+            powerupElementCache[powerup.type] = {
+                element: document.getElementById(`powerup-${powerup.type}`),
+                indicator: document.getElementById(`indicator-${powerup.type}`)
+            };
+        });
+        
+        powerupBarInitialized = true;
+    }
     
-    container.innerHTML = visiblePowerups.map(powerup => {
+    // Update existing elements
+    powerupList.forEach(powerup => {
+        const cached = powerupElementCache[powerup.type];
+        if (!cached || !cached.element) return;
+        
         const count = userProfile.powerUps[powerup.type];
         const isActive = activePowerups[powerup.type].active;
         const activeTime = activePowerups[powerup.type].timeLeft;
         const cooldown = activePowerups[powerup.type].cooldown;
         
+        // Update element classes
+        cached.element.className = 'powerup-icon-compact';
+        const isDisabled = count === 0 && !isActive && cooldown === 0;
+        if (isDisabled) {
+            cached.element.classList.add('disabled');
+            cached.element.onclick = null;
+        } else {
+            cached.element.onclick = () => usePowerup(powerup.type);
+        }
+        
+        // Update indicator
         let indicatorClass, indicatorText;
-
         if (isActive && activeTime > 0) {
             indicatorClass = 'active';
             indicatorText = activeTime + 's';
@@ -350,23 +384,24 @@ const visiblePowerups = powerupList;
             indicatorClass = 'available';
             indicatorText = count;
         } else {
-            // Don't show indicator for unowned powerups
-            indicatorClass = '';
-            indicatorText = '';
+            cached.indicator.style.display = 'none';
+            return;
         }
         
-        const isDisabled = count === 0 && !isActive && cooldown === 0;
-        const clickAction = isDisabled || cooldown > 0 || isActive ? '' : `usePowerup('${powerup.type}')`;
-        
-        return `
-        <div class="powerup-icon-compact ${isDisabled ? 'disabled' : ''}" 
-             onclick="${clickAction}"
-             title="${powerup.name}">
-            ${powerup.icon}
-            ${indicatorClass ? `<div class="powerup-indicator ${indicatorClass}">${indicatorText}</div>` : ''}
-        </div>
-    `;
-    }).join('');
+        cached.indicator.className = `powerup-indicator ${indicatorClass}`;
+        cached.indicator.textContent = indicatorText;
+        cached.indicator.style.display = 'flex';
+    });
+}
+
+// Reset function for when powerup bar needs to be rebuilt
+function resetPowerupBar() {
+    powerupBarInitialized = false;
+    powerupElementCache = {};
+    const container = document.getElementById('powerupIcons');
+    if (container) {
+        container.innerHTML = '';
+    }
 }
 
 
@@ -388,3 +423,4 @@ window.getStatusId = getStatusId;
 window.getCardId = getCardId;
 window.getTimerId = getTimerId;
 window.getButtonText = getButtonText;
+window.resetPowerupBar = resetPowerupBar;

@@ -4496,6 +4496,8 @@ function initializeGame() {
     if (!markets || markets.length === 0) {
         markets = [...marketData[currentAssetClass]];
     }
+
+    clearMarketElementCache();
     
     markets.forEach(market => {
         if (market.exposure === 0 && market.trend === 0) {
@@ -4522,56 +4524,70 @@ function getBarColor(exposure, limit) {
     return 'green';
 }
 
+// Cache for DOM elements to avoid repeated queries
+let marketElementCache = {};
+
 function updateDisplay() {
     markets.forEach((market, index) => {
-        const bar = document.getElementById(`bar-${index}`);
-        const exposureDisplay = document.getElementById(`exposure-${index}`);
-        const marketRow = document.getElementById(`market-${index}`);
-        const countdown = document.getElementById(`countdown-${index}`);
+        // Use cached elements or query once and cache
+        if (!marketElementCache[index]) {
+            marketElementCache[index] = {
+                bar: document.getElementById(`bar-${index}`),
+                exposureDisplay: document.getElementById(`exposure-${index}`),
+                marketRow: document.getElementById(`market-${index}`),
+                countdown: document.getElementById(`countdown-${index}`),
+                timerText: document.getElementById(`timer-${index}`),
+                circle: document.getElementById(`circle-${index}`)
+            };
+        }
         
-        if (!bar) return;
+        const elements = marketElementCache[index];
+        if (!elements.bar) return;
         
         const exposurePercent = Math.min(40, Math.abs(market.exposure) / market.limit * 40);
         const isLong = market.exposure >= 0;
         const barColor = getBarColor(market.exposure, market.limit);
         
-        bar.className = `exposure-bar ${isLong ? 'long' : 'short'} ${barColor}`;
-        bar.style.width = exposurePercent + '%';
+        elements.bar.className = `exposure-bar ${isLong ? 'long' : 'short'} ${barColor}`;
+        elements.bar.style.width = exposurePercent + '%';
         
-        exposureDisplay.textContent = Math.round(market.exposure);
-        exposureDisplay.style.color = barColor === 'white' ? '#ffffff' : '#ffeb3b';
+        elements.exposureDisplay.textContent = Math.round(market.exposure);
+        elements.exposureDisplay.style.color = barColor === 'white' ? '#ffffff' : '#ffeb3b';
         
         const isBreached = Math.abs(market.exposure) >= market.limit;
         const isCritical = Math.abs(market.exposure) >= market.limit * 1.5;
         
-        marketRow.className = 'market-row';
+        elements.marketRow.className = 'market-row';
         if (activePowerups.marketFreeze.active) {
-            marketRow.classList.add('market-frozen');
+            elements.marketRow.classList.add('market-frozen');
         }
         if (activePowerups.volatilityShield.active) {
-            marketRow.classList.add('volatility-shielded');
+            elements.marketRow.classList.add('volatility-shielded');
         }
         if (isCritical) {
-            marketRow.classList.add('critical-warning');
+            elements.marketRow.classList.add('critical-warning');
         } else if (isBreached) {
-            marketRow.classList.add('warning');
+            elements.marketRow.classList.add('warning');
         }
         
         if (isBreached && individualBreachTimers[index] > 0 && !activePowerups.freezeTimer.active) {
-            countdown.style.display = 'block';
-            const timerText = document.getElementById(`timer-${index}`);
-            const circle = document.getElementById(`circle-${index}`);
+            elements.countdown.style.display = 'block';
             const timeLeft = individualBreachTimers[index];
-            timerText.textContent = Math.max(0, timeLeft);
+            elements.timerText.textContent = Math.max(0, timeLeft);
             
             const progress = (timeLeft / adminSettings.breachTimerSeconds) * 360;
-            circle.style.setProperty('--progress', `${progress}deg`);
+            elements.circle.style.setProperty('--progress', `${progress}deg`);
         } else {
-            countdown.style.display = 'none';
+            elements.countdown.style.display = 'none';
         }
     });
     
     updateBreachBadges();
+}
+
+// Clear cache when markets are reinitialized
+function clearMarketElementCache() {
+    marketElementCache = {};
 }
 
 // Market exposure update engine
@@ -5491,6 +5507,10 @@ function getButtonText(powerupType) {
 let powerupScrollOffset = 0;
 let maxPowerupScrollOffset = 0;
 
+// Cache for powerup elements
+let powerupElementCache = {};
+let powerupBarInitialized = false;
+
 function populateQuickPowerupBar() {
     const container = document.getElementById('powerupIcons');
     if (!container) {
@@ -5499,7 +5519,6 @@ function populateQuickPowerupBar() {
         return;
     }
     
-    // Only show powerups that are owned or active
     const powerupList = [
         { type: 'marketFreeze', icon: '❄️', name: 'Market Freeze' },
         { type: 'volatilityShield', icon: '🛡️', name: 'Volatility Shield' },
@@ -5510,17 +5529,48 @@ function populateQuickPowerupBar() {
         { type: 'noddingBird', icon: '🦆', name: 'Nodding Bird' }
     ];
     
-// Show all powerups (will be greyed out if not owned)
-const visiblePowerups = powerupList;
+    // Initialize HTML structure only once
+    if (!powerupBarInitialized) {
+        container.innerHTML = powerupList.map(powerup => `
+            <div class="powerup-icon-compact" id="powerup-${powerup.type}" title="${powerup.name}">
+                ${powerup.icon}
+                <div class="powerup-indicator" id="indicator-${powerup.type}" style="display: none;"></div>
+            </div>
+        `).join('');
+        
+        // Cache all elements
+        powerupList.forEach(powerup => {
+            powerupElementCache[powerup.type] = {
+                element: document.getElementById(`powerup-${powerup.type}`),
+                indicator: document.getElementById(`indicator-${powerup.type}`)
+            };
+        });
+        
+        powerupBarInitialized = true;
+    }
     
-    container.innerHTML = visiblePowerups.map(powerup => {
+    // Update existing elements
+    powerupList.forEach(powerup => {
+        const cached = powerupElementCache[powerup.type];
+        if (!cached || !cached.element) return;
+        
         const count = userProfile.powerUps[powerup.type];
         const isActive = activePowerups[powerup.type].active;
         const activeTime = activePowerups[powerup.type].timeLeft;
         const cooldown = activePowerups[powerup.type].cooldown;
         
+        // Update element classes
+        cached.element.className = 'powerup-icon-compact';
+        const isDisabled = count === 0 && !isActive && cooldown === 0;
+        if (isDisabled) {
+            cached.element.classList.add('disabled');
+            cached.element.onclick = null;
+        } else {
+            cached.element.onclick = () => usePowerup(powerup.type);
+        }
+        
+        // Update indicator
         let indicatorClass, indicatorText;
-
         if (isActive && activeTime > 0) {
             indicatorClass = 'active';
             indicatorText = activeTime + 's';
@@ -5531,23 +5581,24 @@ const visiblePowerups = powerupList;
             indicatorClass = 'available';
             indicatorText = count;
         } else {
-            // Don't show indicator for unowned powerups
-            indicatorClass = '';
-            indicatorText = '';
+            cached.indicator.style.display = 'none';
+            return;
         }
         
-        const isDisabled = count === 0 && !isActive && cooldown === 0;
-        const clickAction = isDisabled || cooldown > 0 || isActive ? '' : `usePowerup('${powerup.type}')`;
-        
-        return `
-        <div class="powerup-icon-compact ${isDisabled ? 'disabled' : ''}" 
-             onclick="${clickAction}"
-             title="${powerup.name}">
-            ${powerup.icon}
-            ${indicatorClass ? `<div class="powerup-indicator ${indicatorClass}">${indicatorText}</div>` : ''}
-        </div>
-    `;
-    }).join('');
+        cached.indicator.className = `powerup-indicator ${indicatorClass}`;
+        cached.indicator.textContent = indicatorText;
+        cached.indicator.style.display = 'flex';
+    });
+}
+
+// Reset function for when powerup bar needs to be rebuilt
+function resetPowerupBar() {
+    powerupBarInitialized = false;
+    powerupElementCache = {};
+    const container = document.getElementById('powerupIcons');
+    if (container) {
+        container.innerHTML = '';
+    }
 }
 
 
@@ -5569,6 +5620,7 @@ window.getStatusId = getStatusId;
 window.getCardId = getCardId;
 window.getTimerId = getTimerId;
 window.getButtonText = getButtonText;
+window.resetPowerupBar = resetPowerupBar;
 
 // ===== UI_MODULE MODULE =====
 // ===== UI MANAGEMENT MODULE =====

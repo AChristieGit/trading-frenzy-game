@@ -607,11 +607,16 @@ setInterval(() => {
 
 // Set up auth state listener
 // This should be at the end of auth.js
+// Global variable to store the auth listener unsubscribe function
+let authStateUnsubscribe = null;
+
+// Set up auth state listener
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (window.supabase && supabase && supabase.auth) {
             try {
-                supabase.auth.onAuthStateChange((event, session) => {
+                // Store the unsubscribe function
+                authStateUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
                     if (event === 'SIGNED_OUT') {
                         currentUser = null;
                         isGuestMode = false;
@@ -631,6 +636,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 100);
 });
+
+// Cleanup function for auth listeners
+function cleanupAuthListeners() {
+    if (authStateUnsubscribe) {
+        try {
+            authStateUnsubscribe.unsubscribe();
+        } catch (error) {
+            console.error('Error unsubscribing from auth state changes:', error);
+        }
+        authStateUnsubscribe = null;
+    }
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', cleanupAuthListeners);
 
 // Export to global scope
 window.supabase = supabase;

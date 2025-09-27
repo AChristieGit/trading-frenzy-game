@@ -205,15 +205,26 @@ function showLevelUp() {
     notification.textContent = `LEVEL UP! You are now Level ${userProfile.level}!`;
     document.body.appendChild(notification);
     
-    setTimeout(() => {
+    const cleanup = () => {
         try {
-            if (notification.parentNode) {
+            if (notification && notification.parentNode) {
                 notification.parentNode.removeChild(notification);
             }
         } catch (e) {
             // Silently handle case where element was already removed
         }
-    }, 2000);
+    };
+    
+    const timeoutId = setTimeout(cleanup, 2000);
+    
+    // Store for potential cleanup
+    if (!window.gameNotificationCleanups) {
+        window.gameNotificationCleanups = [];
+    }
+    window.gameNotificationCleanups.push({
+        cleanup: cleanup,
+        timeoutId: timeoutId
+    });
 }
 
 // Pause menu functions

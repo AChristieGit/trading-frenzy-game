@@ -56,7 +56,6 @@ let gameInterval = window.gameInterval;
 let timerInterval = window.timerInterval;
 let powerupInterval = window.powerupInterval;
 
-// Centralized interval management
 function clearAllIntervals() {
     if (gameInterval) {
         clearInterval(gameInterval);
@@ -69,6 +68,20 @@ function clearAllIntervals() {
     if (powerupInterval) {
         clearInterval(powerupInterval);
         powerupInterval = null;
+    }
+    
+    // Also clear any window-level intervals that might exist
+    if (window.gameInterval) {
+        clearInterval(window.gameInterval);
+        window.gameInterval = null;
+    }
+    if (window.timerInterval) {
+        clearInterval(window.timerInterval);
+        window.timerInterval = null;
+    }
+    if (window.powerupInterval) {
+        clearInterval(window.powerupInterval);
+        window.powerupInterval = null;
     }
 }
 
@@ -344,6 +357,25 @@ function returnToMenu() {
     if (currentUser && !isGuestMode) {
         saveUserProgress();
     }
+    
+    // Additional cleanup to prevent memory leaks
+    clearAllIntervals(); // Call again to be absolutely sure
+    
+    // Clean up notifications and their timers
+    if (window.gameNotificationCleanups) {
+        window.gameNotificationCleanups.forEach(item => {
+            clearTimeout(item.timeoutId);
+            if (item.cleanup) {
+                item.cleanup();
+            }
+        });
+        window.gameNotificationCleanups = [];
+    }
+    
+    // Clean up auth listeners (this function will be defined in auth_module.js)
+    if (window.cleanupAuthListeners) {
+        cleanupAuthListeners();
+    }
 }
 
 // Difficulty management
@@ -438,12 +470,21 @@ function handleEscalatingDifficulty() {
             } catch (e) {
                 // Silently handle case where element was already removed
             }
-            notification = null; // Ensure garbage collection
+            notification = null;
         };
         
-        setTimeout(cleanupNotification, 3000);
+        const timeoutId = setTimeout(cleanupNotification, 3000);
         
-        // Also cleanup on page unload to prevent memory leaks
+        // Store cleanup function for manual cleanup if needed
+        if (!window.gameNotificationCleanups) {
+            window.gameNotificationCleanups = [];
+        }
+        window.gameNotificationCleanups.push({
+            cleanup: cleanupNotification,
+            timeoutId: timeoutId
+        });
+        
+        // Also cleanup on page unload
         window.addEventListener('beforeunload', cleanupNotification, { once: true });
         
         updateGlobalVolatilityDisplay(); // Defined in UI module
@@ -625,6 +666,18 @@ function formatTime(seconds) {
         return `${minutes}m ${remainingSeconds}s`;
     }
     return `${remainingSeconds}s`;
+}
+
+function cleanupAllNotifications() {
+    if (window.gameNotificationCleanups) {
+        window.gameNotificationCleanups.forEach(item => {
+            clearTimeout(item.timeoutId);
+            if (item.cleanup) {
+                item.cleanup();
+            }
+        });
+        window.gameNotificationCleanups = [];
+    }
 }
 
 // Export to global scope to prevent redeclaration conflicts

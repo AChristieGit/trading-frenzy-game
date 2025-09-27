@@ -3,6 +3,10 @@
 // Exposes: Power-up activation, timer management, display updates
 
 // Power-up activation function
+
+let powerupElementCache = {};
+let powerupBarInitialized = false;
+
 function usePowerup(powerupType) {
     if (isPaused) {
         alert('Cannot use power-ups while game is paused!');
@@ -210,7 +214,6 @@ function updateGlobalEffectsBar() {
         effectsDiv.innerHTML = activeEffectsList.join('');
     }
     
-    updatePowerupScrollButtons();
 }
 
 // Admin function for giving all powerups
@@ -310,9 +313,6 @@ function getButtonText(powerupType) {
 let powerupScrollOffset = 0;
 let maxPowerupScrollOffset = 0;
 
-// Cache for powerup elements
-let powerupElementCache = {};
-let powerupBarInitialized = false;
 
 function populateQuickPowerupBar() {
     const container = document.getElementById('powerupIcons');
@@ -321,7 +321,7 @@ function populateQuickPowerupBar() {
         setTimeout(() => populateQuickPowerupBar(), 100);
         return;
     }
-    
+        
     const powerupList = [
         { type: 'marketFreeze', icon: '❄️', name: 'Market Freeze' },
         { type: 'volatilityShield', icon: '🛡️', name: 'Volatility Shield' },

@@ -56,6 +56,7 @@ let gameInterval = window.gameInterval;
 let timerInterval = window.timerInterval;
 let powerupInterval = window.powerupInterval;
 
+
 function clearAllIntervals() {
     if (gameInterval) {
         clearInterval(gameInterval);
@@ -84,6 +85,52 @@ function clearAllIntervals() {
         window.powerupInterval = null;
     }
 }
+
+// Add this near the top of gamestate_module.js, after the variable declarations
+let operationQueue = [];
+let isProcessingQueue = false;
+
+async function queueOperation(operationName, operationFunction) {
+    return new Promise((resolve, reject) => {
+        operationQueue.push({
+            name: operationName,
+            execute: operationFunction,
+            resolve: resolve,
+            reject: reject,
+            timestamp: Date.now()
+        });
+        
+        processOperationQueue();
+    });
+}
+
+async function processOperationQueue() {
+    if (isProcessingQueue || operationQueue.length === 0) {
+        return;
+    }
+    
+    isProcessingQueue = true;
+    
+    try {
+        while (operationQueue.length > 0) {
+            const operation = operationQueue.shift();
+            
+            try {
+                console.log(`Processing operation: ${operation.name}`);
+                const result = await operation.execute();
+                operation.resolve(result);
+            } catch (error) {
+                console.error(`Operation ${operation.name} failed:`, error);
+                operation.reject(error);
+            }
+        }
+    } catch (error) {
+        console.error('Critical error in operation queue:', error);
+    } finally {
+        isProcessingQueue = false;
+    }
+}
+
 
 // Admin panel state
 let showAdminPanel = window.showAdminPanel || false;

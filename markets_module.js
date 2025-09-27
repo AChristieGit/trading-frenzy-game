@@ -270,6 +270,7 @@ function switchAssetClass(assetClass) {
     
     const marketsContainer = document.getElementById('markets');
     marketsContainer.innerHTML = markets.map(createMarketRow).join('');
+    clearMarketElementCache(); // Clear cache after regenerating HTML
     updateDisplay();
 }
 
@@ -350,3 +351,4 @@ window.updateExposures = updateExposures;
 window.switchAssetClass = switchAssetClass;
 window.updateBreachTimers = updateBreachTimers;
 window.updateBreachBadges = updateBreachBadges;
+window.clearMarketElementCache = clearMarketElementCache;

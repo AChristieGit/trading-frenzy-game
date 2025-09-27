@@ -38,7 +38,7 @@ function initializeSupabase() {
         if (SUPABASE_URL === 'YOUR_SUPABASE_URL_HERE' || SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE') {
             console.log('Supabase credentials not configured, starting in guest mode');
             continueAsGuest();
-            initializeEverything(); // This function needs to be defined in the main file
+            initializeEverything();
             return;
         }
         
@@ -49,13 +49,18 @@ function initializeSupabase() {
             return;
         }
         
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                autoRefreshToken: false, // Disable automatic token refresh during local dev
+                persistSession: false    // Don't persist sessions during local dev
+            }
+        });
         console.log('Supabase initialized successfully');
         checkAuthState();
     } catch (error) {
         console.error('Failed to initialize Supabase:', error);
         continueAsGuest();
-        initializeEverything(); // This function needs to be defined in the main file
+        initializeEverything();
     }
 }
 
@@ -380,39 +385,105 @@ function createDefaultProfileObject(username) {
 async function loadUserProfile() {
     if (!currentUser) {
         console.error('No current user for profile loading');
-        return;
+        return false; // Return false to indicate failure
     }
     
     try {
         const { data, error } = await supabase
             .from('user_profiles')
-            .select('*')  // This should get all fields including best_score
+            .select('*')
             .eq('user_id', currentUser.id)
             .single();
         
         if (error) {
             if (error.code === 'PGRST116') {
-                // No profile found, create one
-                const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
-                await createUserProfile(username);
+                // No profile found, try to create one
+                try {
+                    const username = currentUser.user_metadata?.username || currentUser.email.split('@')[0];
+                    await createUserProfile(username);
+                    return true; // Profile created successfully
+                } catch (createError) {
+                    console.error('Failed to create user profile:', createError);
+                    throw createError; // Re-throw to be caught by outer catch
+                }
             } else {
+                // Some other database error
+                console.error('Database error loading profile:', error);
                 throw error;
             }
         } else if (data) {
-            // Update local userProfile with database data
-            Object.assign(userProfile, {
-                username: data.username,
-                level: data.level,
-                currentXP: data.current_xp,
-                totalXP: data.total_xp,
-                coins: data.coins,
-                gamesPlayed: data.games_played,
-                bestScore: data.best_score || 0,  // Make sure this line exists
-                totalTrades: data.total_trades,
-                breachesFixed: data.breaches_fixed,
-                wins: data.wins,
-                unlockedAssets: data.unlocked_assets || ['indices', 'forex', 'commodities'],
-                powerUps: data.powerups || {
+            // Successfully loaded profile data
+            try {
+                Object.assign(userProfile, {
+                    username: data.username,
+                    level: data.level,
+                    currentXP: data.current_xp,
+                    totalXP: data.total_xp,
+                    coins: data.coins,
+                    gamesPlayed: data.games_played,
+                    bestScore: data.best_score || 0,
+                    totalTrades: data.total_trades,
+                    breachesFixed: data.breaches_fixed,
+                    wins: data.wins,
+                    unlockedAssets: data.unlocked_assets || ['indices', 'forex', 'commodities'],
+                    powerUps: data.powerups || {
+                        freezeTimer: 0,
+                        reduceExposures: 0,
+                        marketFreeze: 0,
+                        volatilityShield: 0,
+                        tradingPlaces: 0,
+                        hotVols: 0,
+                        noddingBird: 0
+                    }
+                });
+                updateMenuDisplay();
+                updateProfileDisplay();
+                return true; // Successfully loaded
+            } catch (assignError) {
+                console.error('Error processing profile data:', assignError);
+                // Even if assignment fails, don't crash - use guest mode
+                continueAsGuest();
+                return false;
+            }
+        }
+    } catch (error) {
+        console.error('Critical error loading user profile:', error);
+        // Always fall back to guest mode if anything goes wrong
+        continueAsGuest();
+        return false;
+    }
+}
+
+async function saveUserProgress() {
+    // Early returns for invalid states
+    if (!currentUser || isGuestMode || !supabase) {
+        console.log('Cannot save progress: no user session or guest mode');
+        return { success: false, reason: 'no_session' };
+    }
+    
+    try {
+        // Validate data before attempting to save
+        const validationErrors = validateAndRepairUserProfile();
+        if (!validationErrors) {
+            console.warn('User profile had validation issues, but was repaired');
+        }
+        
+        // Prepare data with additional safety checks
+        const dataToSave = {
+            username: userProfile.username || 'Unknown User',
+            level: Math.max(1, Math.min(1000, parseInt(userProfile.level) || 1)),
+            current_xp: Math.max(0, Math.min(100000, parseInt(userProfile.currentXP) || 0)),
+            total_xp: Math.max(0, Math.min(10000000, parseInt(userProfile.totalXP) || 0)),
+            coins: Math.max(0, Math.min(1000000, Math.floor(userProfile.coins) || 0)),
+            games_played: Math.max(0, parseInt(userProfile.gamesPlayed) || 0),
+            best_score: Math.max(0, parseInt(userProfile.bestScore) || 0),
+            total_trades: Math.max(0, parseInt(userProfile.totalTrades) || 0),
+            breaches_fixed: Math.max(0, parseInt(userProfile.breachesFixed) || 0),
+            wins: Math.max(0, parseInt(userProfile.wins) || 0),
+            unlocked_assets: Array.isArray(userProfile.unlockedAssets) ? 
+                userProfile.unlockedAssets : ['indices', 'forex', 'commodities'],
+            powerups: (userProfile.powerUps && typeof userProfile.powerUps === 'object') ? 
+                userProfile.powerUps : {
                     freezeTimer: 0,
                     reduceExposures: 0,
                     marketFreeze: 0,
@@ -420,47 +491,48 @@ async function loadUserProfile() {
                     tradingPlaces: 0,
                     hotVols: 0,
                     noddingBird: 0
-                }
-            });
-            console.log("Loaded profile with best score:", userProfile.bestScore);
-            updateMenuDisplay(); // This function needs to be defined in UI module
-            updateProfileDisplay(); // This function needs to be defined in UI module
-        }
-    } catch (error) {
-        console.error('Failed to load user profile:', error);
-        continueAsGuest();
-    }
-}
-
-async function saveUserProgress() {
-    if (!currentUser || isGuestMode || !supabase) {
-        return;
-    }
-    
-    try {
-        const { error } = await supabase
+                },
+            updated_at: new Date().toISOString()
+        };
+        
+        // Attempt the database save with timeout
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Save operation timed out')), 10000); // 10 second timeout
+        });
+        
+        const savePromise = supabase
             .from('user_profiles')
-            .update({
-                username: userProfile.username,
-                level: userProfile.level,
-                current_xp: userProfile.currentXP,
-                total_xp: userProfile.totalXP,
-                coins: Math.floor(userProfile.coins),
-                games_played: userProfile.gamesPlayed,
-                best_score: userProfile.bestScore,  // Make sure this is included
-                total_trades: userProfile.totalTrades,
-                breaches_fixed: userProfile.breachesFixed,
-                wins: userProfile.wins,
-                unlocked_assets: userProfile.unlockedAssets,
-                powerups: userProfile.powerUps,
-                updated_at: new Date().toISOString()
-            })
+            .update(dataToSave)
             .eq('user_id', currentUser.id);
         
-        if (error) throw error;
+        const { error } = await Promise.race([savePromise, timeoutPromise]);
+        
+        if (error) {
+            console.error('Database error during save:', error);
+            throw error;
+        }
+        
+        console.log('User progress saved successfully');
+        return { success: true };
         
     } catch (error) {
         console.error('Failed to save progress:', error);
+        
+        // Return detailed error information
+        let errorType = 'unknown';
+        if (error.message.includes('timeout')) {
+            errorType = 'timeout';
+        } else if (error.message.includes('network')) {
+            errorType = 'network';
+        } else if (error.code) {
+            errorType = 'database';
+        }
+        
+        return { 
+            success: false, 
+            error: error.message, 
+            errorType: errorType 
+        };
     }
 }
 
@@ -611,37 +683,79 @@ setInterval(() => {
 let authStateUnsubscribe = null;
 
 // Set up auth state listener
+// Set up auth state listener  
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
-        if (window.supabase && supabase && supabase.auth) {
+        // Check if Supabase is properly initialized
+        if (window.supabase && supabase && supabase.auth && typeof supabase.auth.onAuthStateChange === 'function') {
             try {
-                // Store the unsubscribe function
                 authStateUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
-                    if (event === 'SIGNED_OUT') {
-                        currentUser = null;
-                        isGuestMode = false;
-                        resetToDefaults();
-                        showAuthScreen();
-                    } else if (event === 'SIGNED_IN' && session?.user) {
-                        currentUser = session.user;
-                        loadUserProfile().then(() => showMenu()).catch(error => {
-                            console.error('Failed to load profile after sign in:', error);
-                            continueAsGuest();
-                        });
+                    // Don't interfere with active gameplay unless it's a critical auth event
+                    if ((window.gameInterval || window.timerInterval) && event !== 'SIGNED_OUT') {
+                        console.log('Game active, deferring auth state change:', event);
+                        
+                        // For token refresh during gameplay, handle silently
+                        if (event === 'TOKEN_REFRESHED') {
+                            console.log('Auth token refreshed during gameplay');
+                            return;
+                        }
+                        
+                        // For other events during gameplay, wait for game to pause/end
+                        setTimeout(() => {
+                            if (!window.gameInterval && !window.timerInterval) {
+                                processAuthStateChange(event, session);
+                            }
+                        }, 1000);
+                        return;
                     }
+                    
+                    // Safe to process immediately
+                    processAuthStateChange(event, session);
                 });
             } catch (error) {
                 console.error('Error setting up auth state listener:', error);
             }
+        } else {
+            console.log('Supabase auth not available, skipping auth state listener setup');
         }
     }, 100);
 });
+
+function processAuthStateChange(event, session) {
+    try {
+        if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            isGuestMode = false;
+            resetToDefaults();
+            showAuthScreen();
+        } else if (event === 'SIGNED_IN' && session?.user) {
+            currentUser = session.user;
+            return loadUserProfile().then(() => {
+                showMenu();
+            }).catch(error => {
+                console.error('Failed to load profile after sign in:', error);
+                continueAsGuest();
+            });
+        } else if (event === 'TOKEN_REFRESHED') {
+            console.log('Auth token refreshed successfully');
+        }
+    } catch (error) {
+        console.error('Error processing auth state change:', error);
+        // Fall back to guest mode on any auth processing error
+        continueAsGuest();
+    }
+}
 
 // Cleanup function for auth listeners
 function cleanupAuthListeners() {
     if (authStateUnsubscribe) {
         try {
-            authStateUnsubscribe.unsubscribe();
+            // Supabase auth listener returns a function, not an object with unsubscribe method
+            if (typeof authStateUnsubscribe === 'function') {
+                authStateUnsubscribe(); // Call the function directly
+            } else if (authStateUnsubscribe.unsubscribe) {
+                authStateUnsubscribe.unsubscribe(); // Fallback for object-style
+            }
         } catch (error) {
             console.error('Error unsubscribing from auth state changes:', error);
         }

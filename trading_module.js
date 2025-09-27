@@ -187,20 +187,62 @@ function addTradeEffect(marketIndex) {
 
 // XP and coin reward system
 function awardXP(amount) {
-    userProfile.currentXP += amount;
-    userProfile.totalXP += amount;
-    
-    // Allow infinite leveling
-    while (userProfile.currentXP >= generateLevelRequirement(userProfile.level)) {
-        userProfile.currentXP -= generateLevelRequirement(userProfile.level);
-        userProfile.level++;
-        showLevelUp(); // Defined in UI module
-        awardCoins(adminSettings.coinRewards.levelUpBonus);
-        updateCareerDisplay(); // Defined in UI module
+    // Validate input parameters first
+    const xpAmount = validateNumericInput(amount, 0, 10000);
+    if (!xpAmount.valid) {
+        console.error('Invalid XP amount:', amount, xpAmount.error);
+        return false; // Don't award invalid XP
     }
     
-    updateProfileDisplay(); // Defined in UI module
-    updateMenuDisplay(); // Defined in UI module
+    try {
+        // Ensure user profile is valid before modifying it
+        const profileValid = validateAndRepairUserProfile();
+        if (!profileValid) {
+            console.error('User profile validation failed in awardXP');
+            return false;
+        }
+        
+        // Safely add XP
+        userProfile.currentXP = Math.max(0, userProfile.currentXP + xpAmount.value);
+        userProfile.totalXP = Math.max(0, userProfile.totalXP + xpAmount.value);
+        
+        // Prevent infinite loops by limiting level-ups per call
+        let levelUpsThisCall = 0;
+        const maxLevelUpsPerCall = 10;
+        
+        while (userProfile.currentXP >= generateLevelRequirement(userProfile.level) && 
+               levelUpsThisCall < maxLevelUpsPerCall) {
+            
+            const levelReq = generateLevelRequirement(userProfile.level);
+            userProfile.currentXP -= levelReq;
+            userProfile.level++;
+            levelUpsThisCall++;
+            
+            try {
+                showLevelUp();
+                awardCoins(adminSettings.coinRewards.levelUpBonus);
+            } catch (uiError) {
+                console.error('Error showing level up:', uiError);
+                // Continue anyway - don't let UI errors stop progression
+            }
+        }
+        
+        // Update displays safely
+        try {
+            updateCareerDisplay();
+            updateProfileDisplay();
+            updateMenuDisplay();
+        } catch (displayError) {
+            console.error('Error updating displays after XP award:', displayError);
+            // Don't throw - the XP was awarded successfully
+        }
+        
+        return true; // Success
+        
+    } catch (error) {
+        console.error('Critical error in awardXP:', error);
+        return false;
+    }
 }
 
 function awardCoins(amount) {

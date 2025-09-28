@@ -126,6 +126,7 @@ function initializeDefaultProfile() {
         breachesFixed: 0,
         wins: 0,
         coins: 0,
+        maxVixSurvived: 10.0,
         unlockedAssets: ['indices', 'forex', 'commodities'],
         powerUps: {
             freezeTimer: 0,

@@ -104,7 +104,7 @@ async function loadVixLeaderboard() {
     try {
         console.log('Fetching VIX leaderboard...');
         
-        // First get the top VIX records
+        // Get the top VIX records from game sessions
         let sessionQuery = supabase
             .from('game_sessions')
             .select('user_id, max_vix_survived, difficulty')

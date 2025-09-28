@@ -228,7 +228,15 @@ function updateExposures() {
 // Asset class switching
 function switchAssetClass(assetClass) {
     if (!userProfile.unlockedAssets.includes(assetClass)) {
-        alert(`${assetClass.charAt(0).toUpperCase() + assetClass.slice(1)} markets are locked! Visit the shop to unlock them.`);
+        let unlockLevel = '';
+        if (assetClass === 'shares') unlockLevel = 'Level 3';
+        if (assetClass === 'crypto') unlockLevel = 'Level 5';
+        
+        if (unlockLevel) {
+            alert(`${assetClass.charAt(0).toUpperCase() + assetClass.slice(1)} markets unlock automatically at ${unlockLevel}!`);
+        } else {
+            alert(`${assetClass.charAt(0).toUpperCase() + assetClass.slice(1)} markets are locked!`);
+        }
         return;
     }
     

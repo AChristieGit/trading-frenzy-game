@@ -2502,7 +2502,7 @@
     <button class="tab-button" onclick="switchAssetClass('shares')" id="sharesTab">
         Shares
         <span class="breach-badge" id="badge-shares" style="display: none;">0</span>
-        <span id="sharesLock" style="position: absolute; top: -5px; right: -5px; font-size: 14px;">🔒</span>
+        <span id="sharesLock" style="position: absolute; top: -5px; right: -5px; font-size: 10px; background: rgba(0,0,0,0.8); color: #ffd700; padding: 1px 3px; border-radius: 3px;">L3</span>
     </button>
     <button class="tab-button" onclick="switchAssetClass('commodities')">
         Commodities
@@ -2511,7 +2511,7 @@
     <button class="tab-button" onclick="switchAssetClass('crypto')" id="cryptoTab">
         Crypto
         <span class="breach-badge" id="badge-crypto" style="display: none;">0</span>
-        <span id="cryptoLock" style="position: absolute; top: -5px; right: -5px; font-size: 14px;">🔒</span>
+        <span id="cryptoLock" style="position: absolute; top: -5px; right: -5px; font-size: 10px; background: rgba(0,0,0,0.8); color: #ffd700; padding: 1px 3px; border-radius: 3px;">L5</span>
     </button>
 </div>
 
@@ -2801,29 +2801,7 @@
         
         <div class="modal-scrollable" style="text-align: left;">
             <h3 style="color: #00d4ff; margin-bottom: 15px;">Asset Classes</h3>
-            
-            <div class="shop-item" id="sharesShop">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div>
-                        <div style="font-weight: bold; color: #ffffff;">📈 Shares Markets</div>
-                        <div style="font-size: 12px; color: #ccc;">7 tech stock markets</div>
-                        <div style="font-size: 11px; color: #888;">Requires Level 3</div>
-                    </div>
-                    <button class="shop-btn" id="buyShares" onclick="buyShopItem('shares')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">150 🪙</button>
-                </div>
-            </div>
-            
-            <div class="shop-item" id="cryptoShop">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1);">
-                    <div>
-                        <div style="font-weight: bold; color: #ffffff;">₿ Crypto Markets</div>
-                        <div style="font-size: 12px; color: #ccc;">7 cryptocurrency markets</div>
-                        <div style="font-size: 11px; color: #888;">Requires Level 5</div>
-                    </div>
-                    <button class="shop-btn" id="buyCrypto" onclick="buyShopItem('crypto')" style="background: #ffd700; color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">300 🪙</button>
-                </div>
-            </div>
-            
+                        
             <h3 style="color: #00d4ff; margin-bottom: 15px;">Power-Ups</h3>
             
             <div class="shop-item">
@@ -3048,6 +3026,7 @@ function initializeDefaultProfile() {
         breachesFixed: 0,
         wins: 0,
         coins: 0,
+        maxVixSurvived: 10.0,
         unlockedAssets: ['indices', 'forex', 'commodities'],
         powerUps: {
             freezeTimer: 0,
@@ -3112,6 +3091,9 @@ window.getCareerTitle = getCareerTitle;
 // ===== AUTHENTICATION SYSTEM MODULE =====
 // Dependencies: config.js (userProfile, initializeDefaultProfile)
 // Exposes: Authentication functions, user session management
+
+let profileCreationInProgress = false;
+let accountCreationCompleted = false;
 
 // Supabase configuration - REPLACE WITH YOUR ACTUAL VALUES
 const SUPABASE_URL = 'https://tgtzzkelnknzhkxxbvtl.supabase.co';
@@ -3326,22 +3308,8 @@ async function handleRegister(event) {
             currentUser = data.user;
             
             // Check if username is already taken in profiles table
-            const { data: existingProfile, error: profileCheckError } = await supabase
-                .from('user_profiles')
-                .select('username')
-                .eq('username', username)
-                .single();
-            
-            if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-                // Unexpected error (not "no rows found")
-                console.error('Profile check error:', profileCheckError);
-            }
-            
-            if (existingProfile) {
-                // Username taken, need to sign out and show error
-                await supabase.auth.signOut();
-                throw new Error('Username already taken');
-            }
+// Temporarily bypass username check due to RLS issues
+console.log('DEBUG: Skipping username check due to database permissions');
             
             await createUserProfile(username);
             showMenu(); // This function needs to be defined in UI module
@@ -3382,55 +3350,74 @@ async function createUserProfile(username) {
         return;
     }
     
-    // Check if there's saved guest progress
-    const savedGuestProgress = sessionStorage.getItem('guestProgress');
-    let defaultProfile;
-    
-    if (savedGuestProgress) {
-        try {
-            // Use guest progress as starting point
-            const guestData = JSON.parse(savedGuestProgress);
-            defaultProfile = {
-                user_id: currentUser.id,
-                username: username,
-                level: guestData.level || 1,
-                current_xp: guestData.currentXP || 0,
-                total_xp: guestData.totalXP || 0,
-                coins: Math.floor(guestData.coins || 0),
-                games_played: guestData.gamesPlayed || 0,
-                best_score: guestData.bestScore || 0,
-                total_trades: guestData.totalTrades || 0,
-                breaches_fixed: guestData.breachesFixed || 0,
-                wins: guestData.wins || 0,
-                unlocked_assets: guestData.unlockedAssets || ['indices', 'forex', 'commodities'],
-                powerups: guestData.powerUps || {
-                    freezeTimer: 0,
-                    reduceExposures: 0,
-                    marketFreeze: 0,
-                    volatilityShield: 0,
-                    tradingPlaces: 0,
-                    hotVols: 0,
-                    noddingBird: 0
-                }
-            };
-            // Clear the temporary storage
-            sessionStorage.removeItem('guestProgress');
-        } catch (parseError) {
-            console.error('Error parsing guest progress:', parseError);
-            sessionStorage.removeItem('guestProgress');
-            defaultProfile = createDefaultProfileObject(username);
-        }
-    } else {
-        // Use default fresh profile
-        defaultProfile = createDefaultProfileObject(username);
+    if (profileCreationInProgress || accountCreationCompleted) {
+        console.log('Profile creation already completed or in progress, skipping...');
+        return;
     }
     
+    profileCreationInProgress = true;
+    
     try {
+        // Check if there's saved guest progress
+        const savedGuestProgress = sessionStorage.getItem('guestProgress');
+        let defaultProfile;
+        
+        if (savedGuestProgress) {
+            try {
+                // Use guest progress as starting point
+                const guestData = JSON.parse(savedGuestProgress);
+                // Add timestamp to ensure uniqueness
+                const uniqueUsername = username + '_' + Date.now().toString().slice(-6);
+                console.log('DEBUG: Creating profile with unique username:', uniqueUsername);
+                
+                defaultProfile = {
+                    user_id: currentUser.id,
+                    username: uniqueUsername,
+                    level: guestData.level || 1,
+                    current_xp: guestData.currentXP || 0,
+                    total_xp: guestData.totalXP || 0,
+                    coins: Math.floor(guestData.coins || 0),
+                    games_played: guestData.gamesPlayed || 0,
+                    best_score: guestData.bestScore || 0,
+                    total_trades: guestData.totalTrades || 0,
+                    breaches_fixed: guestData.breachesFixed || 0,
+                    wins: guestData.wins || 0,
+                    max_vix_survived: guestData.maxVixSurvived || 10.0,
+                    unlocked_assets: guestData.unlockedAssets || ['indices', 'forex', 'commodities'],
+                    powerups: guestData.powerUps || {
+                        freezeTimer: 0,
+                        reduceExposures: 0,
+                        marketFreeze: 0,
+                        volatilityShield: 0,
+                        tradingPlaces: 0,
+                        hotVols: 0,
+                        noddingBird: 0
+                    }
+                };
+                
+                // Clear the temporary storage
+                sessionStorage.removeItem('guestProgress');
+            } catch (parseError) {
+                console.error('Error parsing guest progress:', parseError);
+                sessionStorage.removeItem('guestProgress');
+                defaultProfile = createDefaultProfileObject(username);
+            }
+        } else {
+            // Use default fresh profile
+            defaultProfile = createDefaultProfileObject(username);
+        }
+        
         const { error } = await supabase
             .from('user_profiles')
             .insert([defaultProfile]);
         
-        if (error) throw error;
+        if (error) {
+            console.error('Profile insertion error:', error);
+            if (error.code === '23505') {
+                throw new Error(`Username "${username}" is already taken. Please choose a different username.`);
+            }
+            throw error;
+        }
         
         // Update local userProfile
         Object.assign(userProfile, {
@@ -3441,6 +3428,7 @@ async function createUserProfile(username) {
             coins: defaultProfile.coins,
             gamesPlayed: defaultProfile.games_played,
             bestScore: defaultProfile.best_score,
+            maxVixSurvived: defaultProfile.max_vix_survived,
             totalTrades: defaultProfile.total_trades,
             breachesFixed: defaultProfile.breaches_fixed,
             wins: defaultProfile.wins,
@@ -3453,44 +3441,54 @@ async function createUserProfile(username) {
             while (userProfile.currentXP >= generateLevelRequirement(userProfile.level)) {
                 userProfile.currentXP -= generateLevelRequirement(userProfile.level);
                 userProfile.level++;
-                showLevelUp(); // Show level up notification
-                awardCoins(adminSettings.coinRewards.levelUpBonus); // Award level up coins
+                showLevelUp();
+                awardCoins(adminSettings.coinRewards.levelUpBonus);
             }
         }
 
-        updateMenuDisplay(); // This function needs to be defined in UI module
-        updateProfileDisplay(); // This function needs to be defined in UI module
+        updateMenuDisplay();
+        updateProfileDisplay();
+        
+        // Mark as completed at the end
+        accountCreationCompleted = true;
         
     } catch (error) {
         console.error('Failed to create user profile:', error);
-        throw error; // Re-throw to handle in calling function
+        throw error;
+    } finally {
+        profileCreationInProgress = false;
     }
 }
 
 function createDefaultProfileObject(username) {
-    return {
-        user_id: currentUser.id,
-        username: username,
-        level: 1,
-        current_xp: 0,
-        total_xp: 0,
-        coins: 0,
-        games_played: 0,
-        best_score: 0,
-        total_trades: 0,
-        breaches_fixed: 0,
-        wins: 0,
-        unlocked_assets: ['indices', 'forex', 'commodities'],
-        powerups: {
-            freezeTimer: 0,
-            reduceExposures: 0,
-            marketFreeze: 0,
-            volatilityShield: 0,
-            tradingPlaces: 0,
-            hotVols: 0,
-            noddingBird: 0
-        }
-    };
+// Add timestamp to ensure uniqueness
+const uniqueUsername = username + '_' + Date.now().toString().slice(-6);
+console.log('DEBUG: Creating profile with unique username:', uniqueUsername);
+
+return {
+    user_id: currentUser.id,
+    username: uniqueUsername,
+    level: 1,
+    current_xp: 0,
+    total_xp: 0,
+    coins: 0,
+    games_played: 0,
+    best_score: 0,
+    total_trades: 0,
+    breaches_fixed: 0,
+    wins: 0,
+    max_vix_survived: 10.0,
+    unlocked_assets: ['indices', 'forex', 'commodities'],
+    powerups: {
+        freezeTimer: 0,
+        reduceExposures: 0,
+        marketFreeze: 0,
+        volatilityShield: 0,
+        tradingPlaces: 0,
+        hotVols: 0,
+        noddingBird: 0
+    }
+};
 }
 
 async function loadUserProfile() {
@@ -3533,6 +3531,7 @@ async function loadUserProfile() {
                     coins: data.coins,
                     gamesPlayed: data.games_played,
                     bestScore: data.best_score || 0,
+                    maxVixSurvived: data.max_vix_survived || 10.0,
                     totalTrades: data.total_trades,
                     breachesFixed: data.breaches_fixed,
                     wins: data.wins,
@@ -3588,6 +3587,7 @@ async function saveUserProgress() {
             coins: Math.max(0, Math.min(1000000, Math.floor(userProfile.coins) || 0)),
             games_played: Math.max(0, parseInt(userProfile.gamesPlayed) || 0),
             best_score: Math.max(0, parseInt(userProfile.bestScore) || 0),
+            max_vix_survived: Math.max(10.0, parseFloat(userProfile.maxVixSurvived) || 10.0),
             total_trades: Math.max(0, parseInt(userProfile.totalTrades) || 0),
             breaches_fixed: Math.max(0, parseInt(userProfile.breachesFixed) || 0),
             wins: Math.max(0, parseInt(userProfile.wins) || 0),
@@ -3736,6 +3736,11 @@ function continueAsGuest() {
 
 function guestCreateAccount() {
     // Save current progress temporarily
+    const maxVixValue = window.maxVixSurvived || 10.0;
+    console.log('DEBUG: guestCreateAccount - maxVixSurvived:', maxVixValue);
+    console.log('DEBUG: Current userProfile level:', userProfile.level);
+    console.log('DEBUG: Current userProfile XP:', userProfile.currentXP, userProfile.totalXP);
+    
     const guestProgress = {
         level: userProfile.level,
         currentXP: userProfile.currentXP,
@@ -3747,8 +3752,13 @@ function guestCreateAccount() {
         breachesFixed: userProfile.breachesFixed,
         wins: userProfile.wins,
         unlockedAssets: [...userProfile.unlockedAssets],
-        powerUps: {...userProfile.powerUps}
+        powerUps: {...userProfile.powerUps},
+        maxVixSurvived: maxVixValue
     };
+    
+    console.log('DEBUG: Complete guest progress being saved:', guestProgress);
+    
+    console.log('DEBUG: Guest progress being saved:', guestProgress);
     
     // Store in sessionStorage temporarily
     try {
@@ -3833,8 +3843,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
+let lastProcessedEvent = null;
+let lastProcessedUserId = null;
+
 function processAuthStateChange(event, session) {
     try {
+        // Prevent duplicate processing of the same event for the same user
+        const userId = session?.user?.id;
+        const eventKey = `${event}-${userId}`;
+        
+        if (eventKey === lastProcessedEvent && userId === lastProcessedUserId) {
+            console.log('Duplicate auth event ignored:', event, userId);
+            return;
+        }
+        
+        lastProcessedEvent = eventKey;
+        lastProcessedUserId = userId;
+        
         if (event === 'SIGNED_OUT') {
             currentUser = null;
             isGuestMode = false;
@@ -3917,6 +3942,8 @@ let missedTimers = window.missedTimers || 0;
 let escalationTimer = window.escalationTimer || 0;
 let sessionBreachesFixed = window.sessionBreachesFixed || 0;
 let maxVixSurvived = window.maxVixSurvived || 10.0;
+// Ensure it's always accessible globally
+window.maxVixSurvived = maxVixSurvived;
 
 // Game control variables
 let isPaused = window.isPaused || false;
@@ -4158,7 +4185,17 @@ function startGame() {
     missedTimers = 0;
     escalationTimer = 0;
     sessionBreachesFixed = 0;
+
+    
+// Don't reset maxVixSurvived for guest users as it tracks their best across all games
+if (!isGuestMode) {
     maxVixSurvived = 10.0;
+    console.log('DEBUG: Reset maxVixSurvived for logged-in user');
+} else {
+    console.log('DEBUG: Preserving maxVixSurvived for guest user:', maxVixSurvived);
+}
+
+
     isPaused = false; // Reset pause state
     adminSettings.globalVolatilityMultiplier = baseGlobalVolatility;
     updateGlobalVolatilityDisplay(); // Defined in UI module
@@ -4231,6 +4268,13 @@ function endGame(message) {
     if (score > userProfile.bestScore) {
         userProfile.bestScore = score;
     }
+    
+    // Update max VIX survived if this session was higher
+    if (maxVixSurvived > (userProfile.maxVixSurvived || 10.0)) {
+        userProfile.maxVixSurvived = maxVixSurvived;
+        console.log('DEBUG: Updated profile maxVixSurvived to:', maxVixSurvived);
+    }
+    
     if (score > 0) {
         userProfile.wins++;
     }
@@ -4396,8 +4440,12 @@ function handleEscalatingDifficulty() {
         escalationTimer = 0;
 
         const baseVix = adminSettings.globalVolatilityMultiplier * 10;
+        console.log('DEBUG: Current VIX level:', baseVix, 'Previous max:', maxVixSurvived);
         if (baseVix > maxVixSurvived) {
             maxVixSurvived = baseVix;
+            console.log('DEBUG: New max VIX survived:', maxVixSurvived);
+            // Also update window global to ensure it's accessible
+            window.maxVixSurvived = maxVixSurvived;
         }
         
         let notification = document.createElement('div');
@@ -4634,6 +4682,18 @@ function cleanupAllNotifications() {
         window.gameNotificationCleanups = [];
     }
 }
+
+
+// Temporary debug function
+function debugVixValue() {
+    console.log('DEBUG: Current maxVixSurvived:', maxVixSurvived);
+    console.log('DEBUG: window.maxVixSurvived:', window.maxVixSurvived);
+    console.log('DEBUG: Current volatility multiplier:', adminSettings.globalVolatilityMultiplier);
+    console.log('DEBUG: Current VIX level:', adminSettings.globalVolatilityMultiplier * 10);
+}
+
+// Export it
+window.debugVixValue = debugVixValue;
 
 // Handle tab visibility changes to prevent blank screen
 document.addEventListener('visibilitychange', function() {
@@ -4934,7 +4994,15 @@ function updateExposures() {
 // Asset class switching
 function switchAssetClass(assetClass) {
     if (!userProfile.unlockedAssets.includes(assetClass)) {
-        alert(`${assetClass.charAt(0).toUpperCase() + assetClass.slice(1)} markets are locked! Visit the shop to unlock them.`);
+        let unlockLevel = '';
+        if (assetClass === 'shares') unlockLevel = 'Level 3';
+        if (assetClass === 'crypto') unlockLevel = 'Level 5';
+        
+        if (unlockLevel) {
+            alert(`${assetClass.charAt(0).toUpperCase() + assetClass.slice(1)} markets unlock automatically at ${unlockLevel}!`);
+        } else {
+            alert(`${assetClass.charAt(0).toUpperCase() + assetClass.slice(1)} markets are locked!`);
+        }
         return;
     }
     
@@ -5273,21 +5341,36 @@ function awardXP(amount) {
         const maxLevelUpsPerCall = 10;
         
         while (userProfile.currentXP >= generateLevelRequirement(userProfile.level) && 
-               levelUpsThisCall < maxLevelUpsPerCall) {
-            
-            const levelReq = generateLevelRequirement(userProfile.level);
-            userProfile.currentXP -= levelReq;
-            userProfile.level++;
-            levelUpsThisCall++;
-            
-            try {
-                showLevelUp();
-                awardCoins(adminSettings.coinRewards.levelUpBonus);
-            } catch (uiError) {
-                console.error('Error showing level up:', uiError);
-                // Continue anyway - don't let UI errors stop progression
-            }
-        }
+        levelUpsThisCall < maxLevelUpsPerCall) {
+     
+     const levelReq = generateLevelRequirement(userProfile.level);
+     userProfile.currentXP -= levelReq;
+     userProfile.level++;
+     levelUpsThisCall++;
+     
+     try {
+         showLevelUp();
+         awardCoins(adminSettings.coinRewards.levelUpBonus);
+         
+         // Auto-unlock asset classes at specific levels
+// Auto-unlock asset classes at specific levels
+if (userProfile.level === 3 && !userProfile.unlockedAssets.includes('shares')) {
+    userProfile.unlockedAssets.push('shares');
+    showAssetUnlockNotification('shares', 'Shares Markets');
+    updateUnlockedAssets(); // Update UI to hide L3 badge
+}
+
+if (userProfile.level === 5 && !userProfile.unlockedAssets.includes('crypto')) {
+    userProfile.unlockedAssets.push('crypto');
+    showAssetUnlockNotification('crypto', 'Crypto Markets');  
+    updateUnlockedAssets(); // Update UI to hide L5 badge
+}
+         
+     } catch (uiError) {
+         console.error('Error showing level up:', uiError);
+         // Continue anyway - don't let UI errors stop progression
+     }
+ }
         
         // Update displays safely
         try {
@@ -5318,27 +5401,7 @@ function awardCoins(amount) {
 function buyShopItem(item) {
     const availableCoins = Math.floor(userProfile.coins);
     
-    if (item === 'shares') {
-        if (userProfile.level >= 3 && availableCoins >= 150 && !userProfile.unlockedAssets.includes('shares')) {
-            userProfile.coins -= 150;
-            userProfile.unlockedAssets.push('shares');
-            updateUnlockedAssets(); // Defined in UI module
-            updateShopAvailability(); // Defined in UI module
-            updateMenuDisplay(); // Defined in UI module
-            updateProfileDisplay(); // Defined in UI module
-            alert('Shares markets unlocked!');
-        }
-    } else if (item === 'crypto') {
-        if (userProfile.level >= 5 && availableCoins >= 300 && !userProfile.unlockedAssets.includes('crypto')) {
-            userProfile.coins -= 300;
-            userProfile.unlockedAssets.push('crypto');
-            updateUnlockedAssets(); // Defined in UI module
-            updateShopAvailability(); // Defined in UI module
-            updateMenuDisplay(); // Defined in UI module
-            updateProfileDisplay(); // Defined in UI module
-            alert('Crypto markets unlocked!');
-        }
-    } else if (item === 'freezeTimer') {
+    if (item === 'freezeTimer') {
         if (availableCoins >= 25) {
             userProfile.coins -= 25;
             userProfile.powerUps.freezeTimer++;
@@ -5465,6 +5528,54 @@ function resetProgress() {
     alert('Progress reset to default state');
 }
 
+// Asset unlock notification
+function showAssetUnlockNotification(assetClass, assetName) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(145deg, #4CAF50, #45a049);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 18px;
+        z-index: 2000;
+        border: 2px solid rgba(255,255,255,0.3);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        text-align: center;
+    `;
+    notification.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
+        <div>NEW ASSET CLASS UNLOCKED!</div>
+        <div style="font-size: 16px; margin-top: 8px; color: rgba(255,255,255,0.9);">${assetName}</div>
+    `;
+    document.body.appendChild(notification);
+    
+    const cleanup = () => {
+        try {
+            if (notification && notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        } catch (e) {
+            // Silently handle case where element was already removed
+        }
+    };
+    
+    const timeoutId = setTimeout(cleanup, 3000);
+    
+    // Store for potential cleanup
+    if (!window.gameNotificationCleanups) {
+        window.gameNotificationCleanups = [];
+    }
+    window.gameNotificationCleanups.push({
+        cleanup: cleanup,
+        timeoutId: timeoutId
+    });
+}
+
 // Export to global scope
 window.buyMarket = buyMarket;
 window.sellMarket = sellMarket;
@@ -5479,6 +5590,7 @@ window.resetProgress = resetProgress;
 window.validateUserData = validateUserData;
 window.validateNumericInput = validateNumericInput;
 window.validateAndRepairUserProfile = validateAndRepairUserProfile;
+window.showAssetUnlockNotification = showAssetUnlockNotification;
 
 
 
@@ -6276,46 +6388,6 @@ function closeShop() {
 
 function updateShopAvailability() {
     const availableCoins = Math.floor(userProfile.coins);
-    
-    safeElementOperation('#buyShares', sharesBtn => {
-        if (userProfile.unlockedAssets.includes('shares')) {
-            sharesBtn.textContent = 'Owned ✓';
-            sharesBtn.style.background = '#4CAF50';
-            sharesBtn.disabled = true;
-        } else if (userProfile.level < 3) {
-            sharesBtn.textContent = 'Level 3';
-            sharesBtn.style.background = '#666';
-            sharesBtn.disabled = true;
-        } else if (availableCoins < 150) {
-            sharesBtn.textContent = '150 🪙';
-            sharesBtn.style.background = '#666';
-            sharesBtn.disabled = true;
-        } else {
-            sharesBtn.textContent = '150 🪙';
-            sharesBtn.style.background = '#ffd700';
-            sharesBtn.disabled = false;
-        }
-    });
-    
-    safeElementOperation('#buyCrypto', cryptoBtn => {
-        if (userProfile.unlockedAssets.includes('crypto')) {
-            cryptoBtn.textContent = 'Owned ✓';
-            cryptoBtn.style.background = '#4CAF50';
-            cryptoBtn.disabled = true;
-        } else if (userProfile.level < 5) {
-            cryptoBtn.textContent = 'Level 5';
-            cryptoBtn.style.background = '#666';
-            cryptoBtn.disabled = true;
-        } else if (availableCoins < 300) {
-            cryptoBtn.textContent = '300 🪙';
-            cryptoBtn.style.background = '#666';
-            cryptoBtn.disabled = true;
-        } else {
-            cryptoBtn.textContent = '300 🪙';
-            cryptoBtn.style.background = '#ffd700';
-            cryptoBtn.disabled = false;
-        }
-    });
 }
 
 // Admin panel display functions
@@ -6589,7 +6661,7 @@ async function loadVixLeaderboard() {
     try {
         console.log('Fetching VIX leaderboard...');
         
-        // First get the top VIX records
+        // Get the top VIX records from game sessions
         let sessionQuery = supabase
             .from('game_sessions')
             .select('user_id, max_vix_survived, difficulty')

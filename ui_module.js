@@ -363,46 +363,6 @@ function closeShop() {
 
 function updateShopAvailability() {
     const availableCoins = Math.floor(userProfile.coins);
-    
-    safeElementOperation('#buyShares', sharesBtn => {
-        if (userProfile.unlockedAssets.includes('shares')) {
-            sharesBtn.textContent = 'Owned ✓';
-            sharesBtn.style.background = '#4CAF50';
-            sharesBtn.disabled = true;
-        } else if (userProfile.level < 3) {
-            sharesBtn.textContent = 'Level 3';
-            sharesBtn.style.background = '#666';
-            sharesBtn.disabled = true;
-        } else if (availableCoins < 150) {
-            sharesBtn.textContent = '150 🪙';
-            sharesBtn.style.background = '#666';
-            sharesBtn.disabled = true;
-        } else {
-            sharesBtn.textContent = '150 🪙';
-            sharesBtn.style.background = '#ffd700';
-            sharesBtn.disabled = false;
-        }
-    });
-    
-    safeElementOperation('#buyCrypto', cryptoBtn => {
-        if (userProfile.unlockedAssets.includes('crypto')) {
-            cryptoBtn.textContent = 'Owned ✓';
-            cryptoBtn.style.background = '#4CAF50';
-            cryptoBtn.disabled = true;
-        } else if (userProfile.level < 5) {
-            cryptoBtn.textContent = 'Level 5';
-            cryptoBtn.style.background = '#666';
-            cryptoBtn.disabled = true;
-        } else if (availableCoins < 300) {
-            cryptoBtn.textContent = '300 🪙';
-            cryptoBtn.style.background = '#666';
-            cryptoBtn.disabled = true;
-        } else {
-            cryptoBtn.textContent = '300 🪙';
-            cryptoBtn.style.background = '#ffd700';
-            cryptoBtn.disabled = false;
-        }
-    });
 }
 
 // Admin panel display functions

@@ -16,6 +16,8 @@ let missedTimers = window.missedTimers || 0;
 let escalationTimer = window.escalationTimer || 0;
 let sessionBreachesFixed = window.sessionBreachesFixed || 0;
 let maxVixSurvived = window.maxVixSurvived || 10.0;
+// Ensure it's always accessible globally
+window.maxVixSurvived = maxVixSurvived;
 
 // Game control variables
 let isPaused = window.isPaused || false;
@@ -257,7 +259,17 @@ function startGame() {
     missedTimers = 0;
     escalationTimer = 0;
     sessionBreachesFixed = 0;
+
+    
+// Don't reset maxVixSurvived for guest users as it tracks their best across all games
+if (!isGuestMode) {
     maxVixSurvived = 10.0;
+    console.log('DEBUG: Reset maxVixSurvived for logged-in user');
+} else {
+    console.log('DEBUG: Preserving maxVixSurvived for guest user:', maxVixSurvived);
+}
+
+
     isPaused = false; // Reset pause state
     adminSettings.globalVolatilityMultiplier = baseGlobalVolatility;
     updateGlobalVolatilityDisplay(); // Defined in UI module
@@ -330,6 +342,13 @@ function endGame(message) {
     if (score > userProfile.bestScore) {
         userProfile.bestScore = score;
     }
+    
+    // Update max VIX survived if this session was higher
+    if (maxVixSurvived > (userProfile.maxVixSurvived || 10.0)) {
+        userProfile.maxVixSurvived = maxVixSurvived;
+        console.log('DEBUG: Updated profile maxVixSurvived to:', maxVixSurvived);
+    }
+    
     if (score > 0) {
         userProfile.wins++;
     }
@@ -495,8 +514,12 @@ function handleEscalatingDifficulty() {
         escalationTimer = 0;
 
         const baseVix = adminSettings.globalVolatilityMultiplier * 10;
+        console.log('DEBUG: Current VIX level:', baseVix, 'Previous max:', maxVixSurvived);
         if (baseVix > maxVixSurvived) {
             maxVixSurvived = baseVix;
+            console.log('DEBUG: New max VIX survived:', maxVixSurvived);
+            // Also update window global to ensure it's accessible
+            window.maxVixSurvived = maxVixSurvived;
         }
         
         let notification = document.createElement('div');
@@ -733,6 +756,18 @@ function cleanupAllNotifications() {
         window.gameNotificationCleanups = [];
     }
 }
+
+
+// Temporary debug function
+function debugVixValue() {
+    console.log('DEBUG: Current maxVixSurvived:', maxVixSurvived);
+    console.log('DEBUG: window.maxVixSurvived:', window.maxVixSurvived);
+    console.log('DEBUG: Current volatility multiplier:', adminSettings.globalVolatilityMultiplier);
+    console.log('DEBUG: Current VIX level:', adminSettings.globalVolatilityMultiplier * 10);
+}
+
+// Export it
+window.debugVixValue = debugVixValue;
 
 // Handle tab visibility changes to prevent blank screen
 document.addEventListener('visibilitychange', function() {

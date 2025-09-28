@@ -2,6 +2,9 @@
 // Dependencies: config.js (userProfile, initializeDefaultProfile)
 // Exposes: Authentication functions, user session management
 
+let profileCreationInProgress = false;
+let accountCreationCompleted = false;
+
 // Supabase configuration - REPLACE WITH YOUR ACTUAL VALUES
 const SUPABASE_URL = 'https://tgtzzkelnknzhkxxbvtl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRndHp6a2VsbmtuemhreHhidnRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NTY5MDIsImV4cCI6MjA3MjMzMjkwMn0.J3-Ht9cuqX60p0n8bSErwuR0C0NSNI-JjyyR_1SCpvg';
@@ -215,22 +218,8 @@ async function handleRegister(event) {
             currentUser = data.user;
             
             // Check if username is already taken in profiles table
-            const { data: existingProfile, error: profileCheckError } = await supabase
-                .from('user_profiles')
-                .select('username')
-                .eq('username', username)
-                .single();
-            
-            if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-                // Unexpected error (not "no rows found")
-                console.error('Profile check error:', profileCheckError);
-            }
-            
-            if (existingProfile) {
-                // Username taken, need to sign out and show error
-                await supabase.auth.signOut();
-                throw new Error('Username already taken');
-            }
+// Temporarily bypass username check due to RLS issues
+console.log('DEBUG: Skipping username check due to database permissions');
             
             await createUserProfile(username);
             showMenu(); // This function needs to be defined in UI module
@@ -271,55 +260,74 @@ async function createUserProfile(username) {
         return;
     }
     
-    // Check if there's saved guest progress
-    const savedGuestProgress = sessionStorage.getItem('guestProgress');
-    let defaultProfile;
-    
-    if (savedGuestProgress) {
-        try {
-            // Use guest progress as starting point
-            const guestData = JSON.parse(savedGuestProgress);
-            defaultProfile = {
-                user_id: currentUser.id,
-                username: username,
-                level: guestData.level || 1,
-                current_xp: guestData.currentXP || 0,
-                total_xp: guestData.totalXP || 0,
-                coins: Math.floor(guestData.coins || 0),
-                games_played: guestData.gamesPlayed || 0,
-                best_score: guestData.bestScore || 0,
-                total_trades: guestData.totalTrades || 0,
-                breaches_fixed: guestData.breachesFixed || 0,
-                wins: guestData.wins || 0,
-                unlocked_assets: guestData.unlockedAssets || ['indices', 'forex', 'commodities'],
-                powerups: guestData.powerUps || {
-                    freezeTimer: 0,
-                    reduceExposures: 0,
-                    marketFreeze: 0,
-                    volatilityShield: 0,
-                    tradingPlaces: 0,
-                    hotVols: 0,
-                    noddingBird: 0
-                }
-            };
-            // Clear the temporary storage
-            sessionStorage.removeItem('guestProgress');
-        } catch (parseError) {
-            console.error('Error parsing guest progress:', parseError);
-            sessionStorage.removeItem('guestProgress');
-            defaultProfile = createDefaultProfileObject(username);
-        }
-    } else {
-        // Use default fresh profile
-        defaultProfile = createDefaultProfileObject(username);
+    if (profileCreationInProgress || accountCreationCompleted) {
+        console.log('Profile creation already completed or in progress, skipping...');
+        return;
     }
     
+    profileCreationInProgress = true;
+    
     try {
+        // Check if there's saved guest progress
+        const savedGuestProgress = sessionStorage.getItem('guestProgress');
+        let defaultProfile;
+        
+        if (savedGuestProgress) {
+            try {
+                // Use guest progress as starting point
+                const guestData = JSON.parse(savedGuestProgress);
+                // Add timestamp to ensure uniqueness
+                const uniqueUsername = username + '_' + Date.now().toString().slice(-6);
+                console.log('DEBUG: Creating profile with unique username:', uniqueUsername);
+                
+                defaultProfile = {
+                    user_id: currentUser.id,
+                    username: uniqueUsername,
+                    level: guestData.level || 1,
+                    current_xp: guestData.currentXP || 0,
+                    total_xp: guestData.totalXP || 0,
+                    coins: Math.floor(guestData.coins || 0),
+                    games_played: guestData.gamesPlayed || 0,
+                    best_score: guestData.bestScore || 0,
+                    total_trades: guestData.totalTrades || 0,
+                    breaches_fixed: guestData.breachesFixed || 0,
+                    wins: guestData.wins || 0,
+                    max_vix_survived: guestData.maxVixSurvived || 10.0,
+                    unlocked_assets: guestData.unlockedAssets || ['indices', 'forex', 'commodities'],
+                    powerups: guestData.powerUps || {
+                        freezeTimer: 0,
+                        reduceExposures: 0,
+                        marketFreeze: 0,
+                        volatilityShield: 0,
+                        tradingPlaces: 0,
+                        hotVols: 0,
+                        noddingBird: 0
+                    }
+                };
+                
+                // Clear the temporary storage
+                sessionStorage.removeItem('guestProgress');
+            } catch (parseError) {
+                console.error('Error parsing guest progress:', parseError);
+                sessionStorage.removeItem('guestProgress');
+                defaultProfile = createDefaultProfileObject(username);
+            }
+        } else {
+            // Use default fresh profile
+            defaultProfile = createDefaultProfileObject(username);
+        }
+        
         const { error } = await supabase
             .from('user_profiles')
             .insert([defaultProfile]);
         
-        if (error) throw error;
+        if (error) {
+            console.error('Profile insertion error:', error);
+            if (error.code === '23505') {
+                throw new Error(`Username "${username}" is already taken. Please choose a different username.`);
+            }
+            throw error;
+        }
         
         // Update local userProfile
         Object.assign(userProfile, {
@@ -330,6 +338,7 @@ async function createUserProfile(username) {
             coins: defaultProfile.coins,
             gamesPlayed: defaultProfile.games_played,
             bestScore: defaultProfile.best_score,
+            maxVixSurvived: defaultProfile.max_vix_survived,
             totalTrades: defaultProfile.total_trades,
             breachesFixed: defaultProfile.breaches_fixed,
             wins: defaultProfile.wins,
@@ -342,44 +351,54 @@ async function createUserProfile(username) {
             while (userProfile.currentXP >= generateLevelRequirement(userProfile.level)) {
                 userProfile.currentXP -= generateLevelRequirement(userProfile.level);
                 userProfile.level++;
-                showLevelUp(); // Show level up notification
-                awardCoins(adminSettings.coinRewards.levelUpBonus); // Award level up coins
+                showLevelUp();
+                awardCoins(adminSettings.coinRewards.levelUpBonus);
             }
         }
 
-        updateMenuDisplay(); // This function needs to be defined in UI module
-        updateProfileDisplay(); // This function needs to be defined in UI module
+        updateMenuDisplay();
+        updateProfileDisplay();
+        
+        // Mark as completed at the end
+        accountCreationCompleted = true;
         
     } catch (error) {
         console.error('Failed to create user profile:', error);
-        throw error; // Re-throw to handle in calling function
+        throw error;
+    } finally {
+        profileCreationInProgress = false;
     }
 }
 
 function createDefaultProfileObject(username) {
-    return {
-        user_id: currentUser.id,
-        username: username,
-        level: 1,
-        current_xp: 0,
-        total_xp: 0,
-        coins: 0,
-        games_played: 0,
-        best_score: 0,
-        total_trades: 0,
-        breaches_fixed: 0,
-        wins: 0,
-        unlocked_assets: ['indices', 'forex', 'commodities'],
-        powerups: {
-            freezeTimer: 0,
-            reduceExposures: 0,
-            marketFreeze: 0,
-            volatilityShield: 0,
-            tradingPlaces: 0,
-            hotVols: 0,
-            noddingBird: 0
-        }
-    };
+// Add timestamp to ensure uniqueness
+const uniqueUsername = username + '_' + Date.now().toString().slice(-6);
+console.log('DEBUG: Creating profile with unique username:', uniqueUsername);
+
+return {
+    user_id: currentUser.id,
+    username: uniqueUsername,
+    level: 1,
+    current_xp: 0,
+    total_xp: 0,
+    coins: 0,
+    games_played: 0,
+    best_score: 0,
+    total_trades: 0,
+    breaches_fixed: 0,
+    wins: 0,
+    max_vix_survived: 10.0,
+    unlocked_assets: ['indices', 'forex', 'commodities'],
+    powerups: {
+        freezeTimer: 0,
+        reduceExposures: 0,
+        marketFreeze: 0,
+        volatilityShield: 0,
+        tradingPlaces: 0,
+        hotVols: 0,
+        noddingBird: 0
+    }
+};
 }
 
 async function loadUserProfile() {
@@ -422,6 +441,7 @@ async function loadUserProfile() {
                     coins: data.coins,
                     gamesPlayed: data.games_played,
                     bestScore: data.best_score || 0,
+                    maxVixSurvived: data.max_vix_survived || 10.0,
                     totalTrades: data.total_trades,
                     breachesFixed: data.breaches_fixed,
                     wins: data.wins,
@@ -477,6 +497,7 @@ async function saveUserProgress() {
             coins: Math.max(0, Math.min(1000000, Math.floor(userProfile.coins) || 0)),
             games_played: Math.max(0, parseInt(userProfile.gamesPlayed) || 0),
             best_score: Math.max(0, parseInt(userProfile.bestScore) || 0),
+            max_vix_survived: Math.max(10.0, parseFloat(userProfile.maxVixSurvived) || 10.0),
             total_trades: Math.max(0, parseInt(userProfile.totalTrades) || 0),
             breaches_fixed: Math.max(0, parseInt(userProfile.breachesFixed) || 0),
             wins: Math.max(0, parseInt(userProfile.wins) || 0),
@@ -625,6 +646,11 @@ function continueAsGuest() {
 
 function guestCreateAccount() {
     // Save current progress temporarily
+    const maxVixValue = window.maxVixSurvived || 10.0;
+    console.log('DEBUG: guestCreateAccount - maxVixSurvived:', maxVixValue);
+    console.log('DEBUG: Current userProfile level:', userProfile.level);
+    console.log('DEBUG: Current userProfile XP:', userProfile.currentXP, userProfile.totalXP);
+    
     const guestProgress = {
         level: userProfile.level,
         currentXP: userProfile.currentXP,
@@ -636,8 +662,13 @@ function guestCreateAccount() {
         breachesFixed: userProfile.breachesFixed,
         wins: userProfile.wins,
         unlockedAssets: [...userProfile.unlockedAssets],
-        powerUps: {...userProfile.powerUps}
+        powerUps: {...userProfile.powerUps},
+        maxVixSurvived: maxVixValue
     };
+    
+    console.log('DEBUG: Complete guest progress being saved:', guestProgress);
+    
+    console.log('DEBUG: Guest progress being saved:', guestProgress);
     
     // Store in sessionStorage temporarily
     try {
@@ -722,8 +753,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
+let lastProcessedEvent = null;
+let lastProcessedUserId = null;
+
 function processAuthStateChange(event, session) {
     try {
+        // Prevent duplicate processing of the same event for the same user
+        const userId = session?.user?.id;
+        const eventKey = `${event}-${userId}`;
+        
+        if (eventKey === lastProcessedEvent && userId === lastProcessedUserId) {
+            console.log('Duplicate auth event ignored:', event, userId);
+            return;
+        }
+        
+        lastProcessedEvent = eventKey;
+        lastProcessedUserId = userId;
+        
         if (event === 'SIGNED_OUT') {
             currentUser = null;
             isGuestMode = false;

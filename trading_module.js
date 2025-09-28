@@ -211,21 +211,36 @@ function awardXP(amount) {
         const maxLevelUpsPerCall = 10;
         
         while (userProfile.currentXP >= generateLevelRequirement(userProfile.level) && 
-               levelUpsThisCall < maxLevelUpsPerCall) {
-            
-            const levelReq = generateLevelRequirement(userProfile.level);
-            userProfile.currentXP -= levelReq;
-            userProfile.level++;
-            levelUpsThisCall++;
-            
-            try {
-                showLevelUp();
-                awardCoins(adminSettings.coinRewards.levelUpBonus);
-            } catch (uiError) {
-                console.error('Error showing level up:', uiError);
-                // Continue anyway - don't let UI errors stop progression
-            }
-        }
+        levelUpsThisCall < maxLevelUpsPerCall) {
+     
+     const levelReq = generateLevelRequirement(userProfile.level);
+     userProfile.currentXP -= levelReq;
+     userProfile.level++;
+     levelUpsThisCall++;
+     
+     try {
+         showLevelUp();
+         awardCoins(adminSettings.coinRewards.levelUpBonus);
+         
+         // Auto-unlock asset classes at specific levels
+// Auto-unlock asset classes at specific levels
+if (userProfile.level === 3 && !userProfile.unlockedAssets.includes('shares')) {
+    userProfile.unlockedAssets.push('shares');
+    showAssetUnlockNotification('shares', 'Shares Markets');
+    updateUnlockedAssets(); // Update UI to hide L3 badge
+}
+
+if (userProfile.level === 5 && !userProfile.unlockedAssets.includes('crypto')) {
+    userProfile.unlockedAssets.push('crypto');
+    showAssetUnlockNotification('crypto', 'Crypto Markets');  
+    updateUnlockedAssets(); // Update UI to hide L5 badge
+}
+         
+     } catch (uiError) {
+         console.error('Error showing level up:', uiError);
+         // Continue anyway - don't let UI errors stop progression
+     }
+ }
         
         // Update displays safely
         try {
@@ -256,27 +271,7 @@ function awardCoins(amount) {
 function buyShopItem(item) {
     const availableCoins = Math.floor(userProfile.coins);
     
-    if (item === 'shares') {
-        if (userProfile.level >= 3 && availableCoins >= 150 && !userProfile.unlockedAssets.includes('shares')) {
-            userProfile.coins -= 150;
-            userProfile.unlockedAssets.push('shares');
-            updateUnlockedAssets(); // Defined in UI module
-            updateShopAvailability(); // Defined in UI module
-            updateMenuDisplay(); // Defined in UI module
-            updateProfileDisplay(); // Defined in UI module
-            alert('Shares markets unlocked!');
-        }
-    } else if (item === 'crypto') {
-        if (userProfile.level >= 5 && availableCoins >= 300 && !userProfile.unlockedAssets.includes('crypto')) {
-            userProfile.coins -= 300;
-            userProfile.unlockedAssets.push('crypto');
-            updateUnlockedAssets(); // Defined in UI module
-            updateShopAvailability(); // Defined in UI module
-            updateMenuDisplay(); // Defined in UI module
-            updateProfileDisplay(); // Defined in UI module
-            alert('Crypto markets unlocked!');
-        }
-    } else if (item === 'freezeTimer') {
+    if (item === 'freezeTimer') {
         if (availableCoins >= 25) {
             userProfile.coins -= 25;
             userProfile.powerUps.freezeTimer++;
@@ -403,6 +398,54 @@ function resetProgress() {
     alert('Progress reset to default state');
 }
 
+// Asset unlock notification
+function showAssetUnlockNotification(assetClass, assetName) {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(145deg, #4CAF50, #45a049);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 10px;
+        font-weight: bold;
+        font-size: 18px;
+        z-index: 2000;
+        border: 2px solid rgba(255,255,255,0.3);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        text-align: center;
+    `;
+    notification.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 8px;">🎉</div>
+        <div>NEW ASSET CLASS UNLOCKED!</div>
+        <div style="font-size: 16px; margin-top: 8px; color: rgba(255,255,255,0.9);">${assetName}</div>
+    `;
+    document.body.appendChild(notification);
+    
+    const cleanup = () => {
+        try {
+            if (notification && notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        } catch (e) {
+            // Silently handle case where element was already removed
+        }
+    };
+    
+    const timeoutId = setTimeout(cleanup, 3000);
+    
+    // Store for potential cleanup
+    if (!window.gameNotificationCleanups) {
+        window.gameNotificationCleanups = [];
+    }
+    window.gameNotificationCleanups.push({
+        cleanup: cleanup,
+        timeoutId: timeoutId
+    });
+}
+
 // Export to global scope
 window.buyMarket = buyMarket;
 window.sellMarket = sellMarket;
@@ -417,4 +460,5 @@ window.resetProgress = resetProgress;
 window.validateUserData = validateUserData;
 window.validateNumericInput = validateNumericInput;
 window.validateAndRepairUserProfile = validateAndRepairUserProfile;
+window.showAssetUnlockNotification = showAssetUnlockNotification;
 

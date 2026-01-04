@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Trading Exposure Game</title>
     <script>
     // Only load MonetAg ads when running on live domain  
@@ -39,6 +39,16 @@
             min-height: 100vh;
             overflow-x: hidden;
         }
+
+        /* Prevent double-tap zoom on mobile */
+* {
+    touch-action: manipulation;
+}
+
+button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         /* Auth Screen Styles */
         .auth-screen {

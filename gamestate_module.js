@@ -264,9 +264,6 @@ function startGame() {
 // Don't reset maxVixSurvived for guest users as it tracks their best across all games
 if (!isGuestMode) {
     maxVixSurvived = 10.0;
-    console.log('DEBUG: Reset maxVixSurvived for logged-in user');
-} else {
-    console.log('DEBUG: Preserving maxVixSurvived for guest user:', maxVixSurvived);
 }
 
 
@@ -343,11 +340,10 @@ function endGame(message) {
         userProfile.bestScore = score;
     }
     
-    // Update max VIX survived if this session was higher
-    if (maxVixSurvived > (userProfile.maxVixSurvived || 10.0)) {
-        userProfile.maxVixSurvived = maxVixSurvived;
-        console.log('DEBUG: Updated profile maxVixSurvived to:', maxVixSurvived);
-    }
+// Update max VIX survived if this session was higher
+if (maxVixSurvived > (userProfile.maxVixSurvived || 10.0)) {
+    userProfile.maxVixSurvived = maxVixSurvived;
+}
     
     if (score > 0) {
         userProfile.wins++;
@@ -514,11 +510,8 @@ function handleEscalatingDifficulty() {
         escalationTimer = 0;
 
         const baseVix = adminSettings.globalVolatilityMultiplier * 10;
-        console.log('DEBUG: Current VIX level:', baseVix, 'Previous max:', maxVixSurvived);
         if (baseVix > maxVixSurvived) {
             maxVixSurvived = baseVix;
-            console.log('DEBUG: New max VIX survived:', maxVixSurvived);
-            // Also update window global to ensure it's accessible
             window.maxVixSurvived = maxVixSurvived;
         }
         
@@ -757,17 +750,6 @@ function cleanupAllNotifications() {
     }
 }
 
-
-// Temporary debug function
-function debugVixValue() {
-    console.log('DEBUG: Current maxVixSurvived:', maxVixSurvived);
-    console.log('DEBUG: window.maxVixSurvived:', window.maxVixSurvived);
-    console.log('DEBUG: Current volatility multiplier:', adminSettings.globalVolatilityMultiplier);
-    console.log('DEBUG: Current VIX level:', adminSettings.globalVolatilityMultiplier * 10);
-}
-
-// Export it
-window.debugVixValue = debugVixValue;
 
 // Handle tab visibility changes to prevent blank screen
 document.addEventListener('visibilitychange', function() {

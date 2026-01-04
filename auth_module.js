@@ -4,6 +4,7 @@
 
 let profileCreationInProgress = false;
 let accountCreationCompleted = false;
+let processedUserIds = new Set();
 
 // Supabase configuration - REPLACE WITH YOUR ACTUAL VALUES
 const SUPABASE_URL = 'https://tgtzzkelnknzhkxxbvtl.supabase.co';
@@ -218,11 +219,25 @@ async function handleRegister(event) {
             currentUser = data.user;
             
             // Check if username is already taken in profiles table
-// Temporarily bypass username check due to RLS issues
-console.log('DEBUG: Skipping username check due to database permissions');
+            const { data: existingProfile, error: profileCheckError } = await supabase
+                .from('user_profiles')
+                .select('username')
+                .eq('username', username)
+                .single();
+        
+            if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+                console.error('Profile check error:', profileCheckError);
+            }
+        
+            if (existingProfile) {
+                // Username taken, need to sign out and show error
+                await supabase.auth.signOut();
+                currentUser = null;
+                throw new Error(`Username "${username}" is already taken. Please choose a different username.`);
+            }
             
             await createUserProfile(username);
-            showMenu(); // This function needs to be defined in UI module
+            showMenu();
         }
         
     } catch (error) {
@@ -259,6 +274,25 @@ async function createUserProfile(username) {
         console.error('No current user for profile creation');
         return;
     }
+
+        // Check if profile already exists for this user
+        try {
+            const { data: existingProfile } = await supabase
+                .from('user_profiles')
+                .select('username')
+                .eq('user_id', currentUser.id)
+                .single();
+            
+            if (existingProfile) {
+                console.log('Profile already exists for user, skipping creation');
+                return;
+            }
+        } catch (error) {
+            // If error is "no rows found", continue with creation
+            if (error.code !== 'PGRST116') {
+                console.error('Error checking existing profile:', error);
+            }
+        }
     
     if (profileCreationInProgress || accountCreationCompleted) {
         console.log('Profile creation already completed or in progress, skipping...');
@@ -276,13 +310,10 @@ async function createUserProfile(username) {
             try {
                 // Use guest progress as starting point
                 const guestData = JSON.parse(savedGuestProgress);
-                // Add timestamp to ensure uniqueness
-                const uniqueUsername = username + '_' + Date.now().toString().slice(-6);
-                console.log('DEBUG: Creating profile with unique username:', uniqueUsername);
-                
+              
                 defaultProfile = {
                     user_id: currentUser.id,
-                    username: uniqueUsername,
+                    username: username,
                     level: guestData.level || 1,
                     current_xp: guestData.currentXP || 0,
                     total_xp: guestData.totalXP || 0,
@@ -329,6 +360,25 @@ async function createUserProfile(username) {
             throw error;
         }
         
+// If guest had VIX > 10, create a session record for leaderboard
+if (savedGuestProgress && guestData.maxVixSurvived && guestData.maxVixSurvived > 10.0) {
+    try {
+        await supabase.from('game_sessions').insert([{
+            user_id: currentUser.id,
+            score: guestData.bestScore || 0,
+            duration: 60,
+            trades: guestData.totalTrades || 0,
+            breaches: 0,
+            difficulty: 2, // Default to Normal
+            max_vix_survived: guestData.maxVixSurvived,
+            created_at: new Date().toISOString()
+        }]);
+        console.log('Guest VIX record transferred to sessions table');
+    } catch (error) {
+        console.error('Failed to transfer VIX to sessions:', error);
+    }
+}
+
         // Update local userProfile
         Object.assign(userProfile, {
             username: defaultProfile.username,
@@ -371,13 +421,9 @@ async function createUserProfile(username) {
 }
 
 function createDefaultProfileObject(username) {
-// Add timestamp to ensure uniqueness
-const uniqueUsername = username + '_' + Date.now().toString().slice(-6);
-console.log('DEBUG: Creating profile with unique username:', uniqueUsername);
-
-return {
-    user_id: currentUser.id,
-    username: uniqueUsername,
+    return {
+        user_id: currentUser.id,
+        username: username,
     level: 1,
     current_xp: 0,
     total_xp: 0,
@@ -647,9 +693,6 @@ function continueAsGuest() {
 function guestCreateAccount() {
     // Save current progress temporarily
     const maxVixValue = window.maxVixSurvived || 10.0;
-    console.log('DEBUG: guestCreateAccount - maxVixSurvived:', maxVixValue);
-    console.log('DEBUG: Current userProfile level:', userProfile.level);
-    console.log('DEBUG: Current userProfile XP:', userProfile.currentXP, userProfile.totalXP);
     
     const guestProgress = {
         level: userProfile.level,
@@ -665,10 +708,6 @@ function guestCreateAccount() {
         powerUps: {...userProfile.powerUps},
         maxVixSurvived: maxVixValue
     };
-    
-    console.log('DEBUG: Complete guest progress being saved:', guestProgress);
-    
-    console.log('DEBUG: Guest progress being saved:', guestProgress);
     
     // Store in sessionStorage temporarily
     try {
@@ -753,22 +792,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
 });
 
-let lastProcessedEvent = null;
-let lastProcessedUserId = null;
-
 function processAuthStateChange(event, session) {
     try {
-        // Prevent duplicate processing of the same event for the same user
         const userId = session?.user?.id;
-        const eventKey = `${event}-${userId}`;
         
-        if (eventKey === lastProcessedEvent && userId === lastProcessedUserId) {
-            console.log('Duplicate auth event ignored:', event, userId);
+        // For SIGNED_IN events, check if we've already processed this user
+        if (event === 'SIGNED_IN' && userId && processedUserIds.has(userId)) {
+            console.log('User already processed, skipping:', userId);
             return;
         }
         
-        lastProcessedEvent = eventKey;
-        lastProcessedUserId = userId;
+        // Add user to processed set for SIGNED_IN events
+        if (event === 'SIGNED_IN' && userId) {
+            processedUserIds.add(userId);
+        }
         
         if (event === 'SIGNED_OUT') {
             currentUser = null;

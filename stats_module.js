@@ -176,7 +176,7 @@ async function loadVixLeaderboard() {
 async function loadLevelLeaderboard() {
     const levelDiv = document.getElementById('levelLeaderboard');
     
-    if (!supabase) {
+    if (!supabaseClient) {
         levelDiv.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Leaderboards not available in guest mode</div>';
         return;
     }
@@ -274,7 +274,7 @@ async function loadLevelLeaderboard() {
 async function loadScoreLeaderboard() {
     const scoreDiv = document.getElementById('scoreLeaderboard');
     
-    if (!supabase) {
+    if (!supabaseClient) {
         scoreDiv.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Leaderboards not available in guest mode</div>';
         return;
     }

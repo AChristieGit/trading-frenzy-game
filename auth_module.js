@@ -127,7 +127,7 @@ async function handleLogin(event) {
     errorDiv.style.display = 'none';
     
     try {
-        const { data, error } = await supabaseClient.auth.signUp({
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
             email: email,
             password: password
         });
@@ -198,7 +198,7 @@ async function handleRegister(event) {
     
     try {
         // First, sign up the user
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await supabaseClient.auth.signUp({
             email: email,
             password: password,
             options: {
@@ -254,7 +254,7 @@ async function handleRegister(event) {
 async function handleLogout() {
     try {
         await saveUserProgress();
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         currentUser = null;
         isGuestMode = false;
         userProfile = initializeDefaultProfile(); // Direct reset only on logout
@@ -348,7 +348,7 @@ async function createUserProfile(username) {
             defaultProfile = createDefaultProfileObject(username);
         }
         
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('user_profiles')
             .insert([defaultProfile]);
         
@@ -454,7 +454,7 @@ async function loadUserProfile() {
     }
     
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('user_profiles')
             .select('*')
             .eq('user_id', currentUser.id)

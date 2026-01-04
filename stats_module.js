@@ -96,7 +96,7 @@ async function loadVixLeaderboard() {
     const vixDataDiv = document.getElementById('vixLeaderboardData');
     const difficultyFilter = document.getElementById('vixDifficultyFilter').value;
     
-    if (!supabase) {
+    if (!supabaseClient) {
         vixDataDiv.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">Leaderboards not available in guest mode</div>';
         return;
     }
@@ -105,7 +105,7 @@ async function loadVixLeaderboard() {
         console.log('Fetching VIX leaderboard...');
         
         // Get the top VIX records from game sessions
-        let sessionQuery = supabase
+        let sessionQuery = supabaseClient
             .from('game_sessions')
             .select('user_id, max_vix_survived, difficulty')
             .gt('max_vix_survived', 10.0)
@@ -127,7 +127,7 @@ async function loadVixLeaderboard() {
         
         // Get user details for these sessions
         const userIds = [...new Set(sessions.map(s => s.user_id))];
-        const { data: users, error: userError } = await supabase
+        const { data: users, error: userError } = await supabaseClient
             .from('user_profiles')
             .select('user_id, username')
             .in('user_id', userIds);
@@ -184,7 +184,7 @@ async function loadLevelLeaderboard() {
     try {
         console.log('Fetching level leaderboard...');
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('user_profiles')
             .select('username, level, total_xp')
             .order('level', { ascending: false })
@@ -283,7 +283,7 @@ async function loadScoreLeaderboard() {
         console.log('Fetching score leaderboard...');
         
         // Get profiles with best scores > 0, ordered by best score
-        const { data: profiles, error: profileError } = await supabase
+        const { data: profiles, error: profileError } = await supabaseClient
             .from('user_profiles')
             .select('username, best_score, user_id')
             .gt('best_score', 0)

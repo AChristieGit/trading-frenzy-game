@@ -20,8 +20,8 @@ function isAdminUser() {
     return currentUser && ADMIN_USERS.includes(currentUser.id);
 }
 
-// Global auth state
-let supabase = window.supabase || null;
+// Global auth state - use window references to avoid redeclaration with Supabase CDN
+let supabaseClient = null;  // Local reference to our initialized client
 let currentUser = window.currentUser || null;
 let isGuestMode = window.isGuestMode || false;
 
@@ -53,7 +53,7 @@ function initializeSupabase() {
             return;
         }
         
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
             auth: {
                 autoRefreshToken: false, // Disable automatic token refresh during local dev
                 persistSession: false    // Don't persist sessions during local dev
@@ -70,7 +70,7 @@ function initializeSupabase() {
 
 // Check if user is already logged in
 async function checkAuthState() {
-    if (!supabase || isAuthOperationInProgress()) {
+    if (!supabaseClient || isAuthOperationInProgress()) {
         continueAsGuest();
         initializeEverything(); // This function needs to be defined in the main file
         return;
@@ -79,7 +79,7 @@ async function checkAuthState() {
     setAuthOperationState(true);
     
     try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
         
         if (error) {
             console.error('Auth session error:', error);
@@ -127,7 +127,7 @@ async function handleLogin(event) {
     errorDiv.style.display = 'none';
     
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signUp({
             email: email,
             password: password
         });
@@ -219,7 +219,7 @@ async function handleRegister(event) {
             currentUser = data.user;
             
             // Check if username is already taken in profiles table
-            const { data: existingProfile, error: profileCheckError } = await supabase
+            const { data: existingProfile, error: profileCheckError } = await supabaseClient
                 .from('user_profiles')
                 .select('username')
                 .eq('username', username)
@@ -231,7 +231,7 @@ async function handleRegister(event) {
         
             if (existingProfile) {
                 // Username taken, need to sign out and show error
-                await supabase.auth.signOut();
+                await supabaseClient.auth.signOut();
                 currentUser = null;
                 throw new Error(`Username "${username}" is already taken. Please choose a different username.`);
             }
@@ -277,7 +277,7 @@ async function createUserProfile(username) {
 
         // Check if profile already exists for this user
         try {
-            const { data: existingProfile } = await supabase
+            const { data, error } = await supabaseClient
                 .from('user_profiles')
                 .select('username')
                 .eq('user_id', currentUser.id)
@@ -522,7 +522,7 @@ async function loadUserProfile() {
 
 async function saveUserProgress() {
     // Early returns for invalid states
-    if (!currentUser || isGuestMode || !supabase) {
+    if (!currentUser || isGuestMode || !supabaseClient) {
         console.log('Cannot save progress: no user session or guest mode');
         return { success: false, reason: 'no_session' };
     }
@@ -567,7 +567,7 @@ async function saveUserProgress() {
             setTimeout(() => reject(new Error('Save operation timed out')), 10000); // 10 second timeout
         });
         
-        const savePromise = supabase
+        const savePromise = supabaseClient
             .from('user_profiles')
             .update(dataToSave)
             .eq('user_id', currentUser.id);
@@ -604,7 +604,7 @@ async function saveUserProgress() {
 }
 
 async function saveGameSession(sessionData) {
-    if (!currentUser || isGuestMode || !supabase) {
+    if (!currentUser || isGuestMode || !supabaseClient) {
         return;
     }
     
@@ -612,7 +612,7 @@ async function saveGameSession(sessionData) {
         console.log("Saving game session with score:", sessionData.score);
         
         // Save the game session
-        const { error: sessionError } = await supabase
+        const { error: sessionError } = await supabaseClient
             .from('game_sessions')
             .insert([{
                 user_id: currentUser.id,
@@ -633,7 +633,7 @@ async function saveGameSession(sessionData) {
         console.log("Game session saved successfully");
         
         // Get the current best_score from database to ensure we have the latest
-        const { data: profileData, error: fetchError } = await supabase
+        const { data: profileData, error: fetchError } = await supabaseClient
             .from('user_profiles')
             .select('best_score')
             .eq('user_id', currentUser.id)
@@ -651,7 +651,7 @@ async function saveGameSession(sessionData) {
         if (sessionData.score > currentBestScore) {
             console.log("Updating best score to", sessionData.score, "from", currentBestScore);
             
-            const { error: profileError } = await supabase
+            const { error: profileError } = await supabaseClient
                 .from('user_profiles')
                 .update({
                     best_score: sessionData.score
@@ -758,9 +758,9 @@ let authStateUnsubscribe = null;
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         // Check if Supabase is properly initialized
-        if (window.supabase && supabase && supabase.auth && typeof supabase.auth.onAuthStateChange === 'function') {
+        if (window.supabase && supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.onAuthStateChange === 'function') {
             try {
-                authStateUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
+                authStateUnsubscribe = supabaseClient.auth.onAuthStateChange((event, session) => {
                     // Don't interfere with active gameplay unless it's a critical auth event
                     if ((window.gameInterval || window.timerInterval) && event !== 'SIGNED_OUT') {
                         console.log('Game active, deferring auth state change:', event);
@@ -851,7 +851,7 @@ function cleanupAuthListeners() {
 window.addEventListener('beforeunload', cleanupAuthListeners);
 
 // Export to global scope
-window.supabase = supabase;
+window.supabaseClient = supabaseClient;
 window.currentUser = currentUser;
 window.isGuestMode = isGuestMode;
 window.initializeSupabase = initializeSupabase;

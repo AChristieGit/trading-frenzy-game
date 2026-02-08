@@ -5195,12 +5195,24 @@ document.addEventListener('visibilitychange', function() {
     } else {
         // Tab is visible again - refresh display
         console.log('Tab visible again');
-        setTimeout(() => {
-            if (currentView === 'markets' && markets.length > 0) {
-                updateDisplay();
-                updateScore();
-            }
-        }, 100);
+        
+        // Don't interfere if game is intentionally paused
+        if (!isPaused) {
+            setTimeout(() => {
+                if (currentView === 'markets' && markets.length > 0) {
+                    updateDisplay();
+                    updateScore();
+                }
+            }, 100);
+        } else {
+            // Just refresh the display without unpausing
+            setTimeout(() => {
+                if (currentView === 'markets' && markets.length > 0) {
+                    updateDisplay();
+                    updateScore();
+                }
+            }, 100);
+        }
     }
 });
 

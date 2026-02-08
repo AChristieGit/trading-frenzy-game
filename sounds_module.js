@@ -46,8 +46,10 @@ function playSound(soundName) {
 }
 
 // Toggle sound on/off
+// Toggle sound on/off
 function toggleSound() {
     soundEnabled = !soundEnabled;
+    window.soundEnabled = soundEnabled; // Update global reference
     localStorage.setItem('soundEnabled', soundEnabled);
     
     // Update all sound volumes
@@ -55,20 +57,23 @@ function toggleSound() {
         sound.volume = soundEnabled ? masterVolume : 0;
     });
     
-    // Update UI
+    // Update UI immediately
     updateSoundUI();
     
     // Play a test sound when enabling
     if (soundEnabled) {
-        playSound('success');
+        setTimeout(() => playSound('success'), 100);
     }
     
     console.log('Sound', soundEnabled ? 'enabled' : 'disabled');
+    return soundEnabled; // Return new state
 }
 
 // Set master volume (0.0 to 1.0)
+// Set master volume (0.0 to 1.0)
 function setVolume(volume) {
     masterVolume = Math.max(0, Math.min(1, parseFloat(volume)));
+    window.masterVolume = masterVolume; // Update global reference
     localStorage.setItem('masterVolume', masterVolume);
     
     if (soundEnabled) {
@@ -79,14 +84,23 @@ function setVolume(volume) {
     
     updateSoundUI();
     console.log('Volume set to:', (masterVolume * 100).toFixed(0) + '%');
+    
+    // Play a brief test sound when adjusting volume
+    if (soundEnabled && masterVolume > 0) {
+        playSound('success');
+    }
 }
 
+// Update sound UI elements
 // Update sound UI elements
 function updateSoundUI() {
     // Update toggle button text
     const soundToggle = document.getElementById('soundToggle');
     if (soundToggle) {
         soundToggle.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+        soundToggle.style.background = soundEnabled ? 
+            'linear-gradient(135deg, #4CAF50, #45a049)' : 
+            'linear-gradient(135deg, #666, #555)';
     }
     
     // Update volume slider value
@@ -94,13 +108,17 @@ function updateSoundUI() {
     if (volumeSlider) {
         volumeSlider.value = masterVolume;
         volumeSlider.disabled = !soundEnabled;
+        volumeSlider.style.opacity = soundEnabled ? '1' : '0.4';
     }
     
     // Update volume percentage display
     const volumePercent = document.getElementById('volumePercent');
     if (volumePercent) {
         volumePercent.textContent = `${Math.round(masterVolume * 100)}%`;
+        volumePercent.style.opacity = soundEnabled ? '1' : '0.4';
     }
+    
+    console.log('UI updated - Sound:', soundEnabled, 'Volume:', Math.round(masterVolume * 100) + '%');
 }
 
 // Initialize sounds when module loads

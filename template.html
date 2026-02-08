@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Trading Exposure Game</title>
     <script>
     // Only load MonetAg ads when running on live domain  
@@ -142,6 +145,8 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
     position: relative;
     border: 1px solid rgba(255,255,255,0.2);
     transition: all 0.3s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .powerup-icon-compact:hover:not(.disabled) {
@@ -239,17 +244,19 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
 
         .auth-button {
-            background: linear-gradient(135deg, #00d4ff, #0099cc);
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 10px;
-        }
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 10px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
 
         .auth-button:hover:not(:disabled) {
             transform: translateY(-1px);
@@ -323,15 +330,17 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
 
         .guest-button {
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: rgba(255,255,255,0.8);
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s ease;
-        }
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
 
         .guest-button:hover {
             background: rgba(255,255,255,0.15);
@@ -589,21 +598,23 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
         
         .menu-action-btn {
-            background: linear-gradient(135deg, #00d4ff, #0099cc);
-            color: white;
-            border: none;
-            padding: 18px 24px;
-            border-radius: 16px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 16px rgba(0,212,255,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: white;
+    border: none;
+    padding: 18px 24px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 16px rgba(0,212,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .menu-action-btn:hover {
             transform: translateY(-2px);
@@ -617,20 +628,22 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
         
         .menu-secondary-btn {
-            background: rgba(255,255,255,0.08);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.15);
-            padding: 12px 16px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
+    background: rgba(255,255,255,0.08);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .menu-secondary-btn:hover {
             background: rgba(255,255,255,0.12);
@@ -735,16 +748,18 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
         
         .profile-btn {
-            background: #673AB7;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: 11px;
-            transition: all 0.2s ease;
-        }
+    background: #673AB7;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 11px;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .profile-btn:hover {
             background: #5E35B1;
@@ -971,17 +986,19 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
         
         .powerup-button {
-            width: 100%;
-            background: linear-gradient(135deg, #9C27B0, #7B1FA2);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-size: 13px;
-        }
+    width: 100%;
+    background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .powerup-button:hover:not(:disabled) {
             background: linear-gradient(135deg, #AB47BC, #8E24AA);
@@ -1032,6 +1049,8 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
             flex-shrink: 0;
             transition: all 0.2s ease;
             box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
         }
         
         .buy-btn {
@@ -1327,6 +1346,8 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
             cursor: pointer;
             font-weight: bold;
             font-size: 11px;
+            touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
         }
         
         .control-btn:hover {
@@ -1548,15 +1569,17 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
         
         .modal-btn {
-            background: #00d4ff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.2s ease;
-        }
+    background: #00d4ff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .modal-btn:hover {
             background: #0099cc;
@@ -1830,17 +1853,19 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
 
         .game-over-btn {
-            background: linear-gradient(135deg, #00d4ff, #0099cc);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 16px rgba(0,212,255,0.3);
-        }
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0,212,255,0.3);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
 
         .game-over-btn:hover {
             transform: translateY(-2px);
@@ -1939,8 +1964,298 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
 }
 
 
+/* Existing styles stay the same */
 
+/* ===== MOBILE RESPONSIVE STYLES ===== */
+@media screen and (max-width: 768px) {
+    /* Header adjustments */
+    .header h1 {
+        font-size: 18px;
+        margin: 0;
+    }
+    
+    /* User profile - make vertical on mobile */
+    .user-profile {
+        flex-direction: column;
+        height: auto;
+        padding: 8px;
+        gap: 8px;
+    }
+    
+    .profile-left {
+        width: 100%;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .profile-buttons {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .profile-btn {
+        font-size: 10px;
+        padding: 6px 10px;
+    }
+    
+    .coins-display {
+        margin-left: 0;
+        order: -1; /* Move coins to top */
+    }
+    
+    /* Compact game info bar */
+    .game-info-bar {
+        flex-direction: column;
+        height: auto;
+        padding: 6px 10px;
+        gap: 8px;
+    }
+    
+    .score-section {
+        width: 100%;
+        justify-content: space-around;
+        gap: 10px;
+    }
+    
+    .score-item {
+        font-size: 11px;
+        margin: 0;
+    }
+    
+    .center-section {
+        width: 100%;
+        justify-content: space-around;
+    }
+    
+    .powerups-section {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .powerups-label {
+        font-size: 11px;
+    }
+    
+    .powerup-icon-compact {
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+    }
+    
+    .powerup-indicator {
+        font-size: 9px;
+        min-width: 16px;
+        height: 16px;
+    }
+    
+    /* Asset tabs - make scrollable */
+    .asset-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 3px;
+        padding: 5px;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    }
+    
+    .tab-button {
+        font-size: 10px;
+        padding: 8px 10px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    }
+    
+    .breach-badge {
+        width: 16px;
+        height: 16px;
+        font-size: 9px;
+        top: -6px;
+        right: -6px;
+    }
+    
+    /* Market container - reduce padding */
+    .market-container {
+        padding: 10px;
+        border-radius: 10px;
+    }
+    
+    /* Market rows - stack vertically on very small screens */
+    .market-row {
+        margin-bottom: 12px;
+        height: auto;
+        min-height: 55px;
+    }
+    
+    .buy-btn, .sell-btn {
+        width: 50px;
+        height: 32px;
+        font-size: 10px;
+        flex-shrink: 0;
+    }
+    
+    .buy-btn {
+        margin-right: 8px;
+    }
+    
+    .sell-btn {
+        margin-left: 8px;
+    }
+    
+    /* Market info - adjust sizing */
+    .market-info {
+        min-width: 70px;
+        padding: 4px 8px;
+    }
+    
+    .market-name {
+        font-size: 11px;
+    }
+    
+    .market-limit {
+        font-size: 9px;
+    }
+    
+    .exposure-value {
+        font-size: 9px;
+    }
+    
+    /* Countdown circle - smaller */
+    .breach-countdown {
+        width: 28px;
+        height: 28px;
+        top: 3px;
+        right: 3px;
+    }
+    
+    .countdown-circle {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .countdown-text {
+        font-size: 10px;
+    }
+    
+    /* Game controls */
+    .game-controls {
+        margin-top: 10px;
+    }
+    
+    .control-btn {
+        font-size: 10px;
+        padding: 8px 12px;
+        margin: 0 3px;
+    }
+    
+    /* Modals - full screen on mobile */
+    .modal-content {
+        width: 95%;
+        max-width: 95%;
+        padding: 20px;
+        max-height: 85vh;
+    }
+    
+    .modal-title {
+        font-size: 16px;
+    }
+    
+    /* Powerups grid - single column on small screens */
+    .powerups-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    /* Shop items - adjust spacing */
+    .shop-item > div {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .shop-btn {
+        width: 100%;
+    }
+    
+    /* Menu screen adjustments */
+    .menu-content {
+        padding: 20px 15px;
+    }
+    
+    .app-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+    }
+    
+    .app-title {
+        font-size: 24px;
+    }
+    
+    .menu-stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    
+    .menu-action-btn {
+        padding: 14px 20px;
+        font-size: 14px;
+    }
+}
 
+/* Extra small screens (phones in portrait) */
+@media screen and (max-width: 480px) {
+    .user-profile {
+        padding: 6px;
+    }
+    
+    .username-display {
+        font-size: 14px;
+    }
+    
+    .level-badge {
+        font-size: 11px;
+        padding: 3px 10px;
+    }
+    
+    .score-item {
+        font-size: 10px;
+    }
+    
+    .tab-button {
+        font-size: 9px;
+        padding: 6px 8px;
+    }
+    
+    .buy-btn, .sell-btn {
+        width: 45px;
+        height: 30px;
+        font-size: 9px;
+    }
+    
+    .market-name {
+        font-size: 10px;
+    }
+}
+
+/* Landscape mode on phones */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    .user-profile {
+        flex-direction: row;
+        height: 50px;
+    }
+    
+    .game-info-bar {
+        flex-direction: row;
+        height: 40px;
+    }
+    
+    .market-row {
+        height: 45px;
+        min-height: 45px;
+    }
+}
     </style>
 </head>
 <body>

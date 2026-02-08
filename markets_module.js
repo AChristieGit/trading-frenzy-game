@@ -180,6 +180,7 @@ function updateExposures() {
             
             if (isBreached && !wasAlreadyBreached) {
                 assetClassBreaches[assetClass].add(marketIndex);
+                playSound('breach'); 
                 // Only create timer if this breach hasn't already expired
                 if (!expiredBreaches[assetClass].has(marketIndex)) {
                     assetClassTimers[assetClass][marketIndex] = adminSettings.breachTimerSeconds;
@@ -294,6 +295,7 @@ function updateBreachTimers() {
                 if (timers[marketIndex] <= 0) {
                     score += adminSettings.timeoutPenalty;
                     missedTimers++;
+                    playSound('lifeLost');
                     updateStrikesDisplay(); // Defined in UI module
                     
                     // Mark as expired and delete timer

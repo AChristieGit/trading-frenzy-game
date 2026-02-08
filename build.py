@@ -69,7 +69,7 @@ def build_game(template_file="template.html", output_file="index.html"):
         "trading_module",     # Needs config + gameState
         "powerups_module",    # Needs config + gameState
         "ui_module",          # Needs config + gameState
-        "stats_module"        # Needs config + auth
+        "stats_module" ,       # Needs config + auth
         "sounds_module"
     ]
     

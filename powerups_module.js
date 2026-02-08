@@ -26,6 +26,7 @@ function usePowerup(powerupType) {
     }
     
     userProfile.powerUps[powerupType]--;
+    playSound('powerup');
     
     switch(powerupType) {
         case 'marketFreeze':

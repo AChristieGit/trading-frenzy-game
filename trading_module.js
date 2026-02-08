@@ -32,6 +32,7 @@ function buyMarket(index) {
             score += adminSettings.breachClearBonus + timeBonus;
             userProfile.breachesFixed++;
             sessionBreachesFixed++;
+            playSound('success');
             awardXP(15);
             awardCoins(adminSettings.coinRewards.breachClear);
         }
@@ -154,6 +155,7 @@ function sellMarket(index) {
             score += adminSettings.breachClearBonus + timeBonus;
             userProfile.breachesFixed++;
             sessionBreachesFixed++;
+            playSound('success');
             awardXP(15);
             awardCoins(adminSettings.coinRewards.breachClear);
         }

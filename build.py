@@ -70,6 +70,7 @@ def build_game(template_file="template.html", output_file="index.html"):
         "powerups_module",    # Needs config + gameState
         "ui_module",          # Needs config + gameState
         "stats_module"        # Needs config + auth
+        "sounds_module"
     ]
     
     print(f"Module loading order: {' -> '.join(module_order)}")

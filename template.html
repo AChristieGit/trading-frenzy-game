@@ -33,7 +33,21 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+}
+
+/* Prevent double-tap zoom on all elements */
+html {
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    touch-action: manipulation;
+}
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -659,10 +673,12 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         
         /* Game Screen Styles */
         .game-screen {
-            display: none;
-            padding: 20px;
-            min-height: 100vh;
-        }
+    display: none;
+    padding: 20px;
+    min-height: 100vh;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .header {
             text-align: center;
@@ -876,11 +892,12 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         .market-container {
     background: rgba(0,0,0,0.6);
     border-radius: 15px;
-    padding: 15px; /* Reduced from 25px */
+    padding: 15px;
     max-width: 1200px;
     margin: 0 auto;
     box-shadow: 0 10px 40px rgba(0,0,0,0.3);
     border: 1px solid rgba(255,255,255,0.1);
+    touch-action: manipulation;
 }
 
 #vixDisplay {
@@ -1086,15 +1103,17 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
         
         .exposure-container {
-            flex: 1;
-            height: 45px;
-            position: relative;
-            background: rgba(255,255,255,0.08);
-            border-radius: 6px;
-            margin: 0;
-            border: 1px solid rgba(255,255,255,0.1);
-            overflow: hidden;
-        }
+    flex: 1;
+    height: 45px;
+    position: relative;
+    background: rgba(255,255,255,0.08);
+    border-radius: 6px;
+    margin: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .breach-countdown {
             position: absolute;
@@ -1183,22 +1202,24 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         }
         
         .market-info {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(145deg, rgba(0,0,0,0.95), rgba(20,20,20,0.95));
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 10;
-            border: 1px solid rgba(255,255,255,0.2);
-            min-width: 85px;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            transition: all 0.3s ease;
-        }
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(145deg, rgba(0,0,0,0.95), rgba(20,20,20,0.95));
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10;
+    border: 1px solid rgba(255,255,255,0.2);
+    min-width: 85px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    transition: all 0.3s ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
         
         .market-row:hover .market-info {
             transform: translate(-50%, -50%) scale(1.02);
@@ -2256,6 +2277,56 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         min-height: 45px;
     }
 }
+
+/* Volume Slider Styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.2);
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+input[type="range"]:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+    cursor: not-allowed;
+}
+
+input[type="range"]:disabled::-moz-range-thumb {
+    cursor: not-allowed;
+}
+
+#soundToggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(156,39,176,0.4);
+}
     </style>
 </head>
 <body>
@@ -2751,10 +2822,32 @@ button, .buy-btn, .sell-btn, .tab-button, .powerup-icon-compact {
         <p class="game-over-subtitle">What would you like to do?</p>
         
         <div style="margin: 30px 0;">
-            <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.15);">
+            <!-- Current Session Stats -->
+            <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.15);">
                 <div style="color: rgba(255,255,255,0.8); font-size: 14px; margin-bottom: 10px;">Current Session:</div>
                 <div style="color: #00ff88; font-weight: 700; font-size: 16px;">Score: <span id="pauseScore">0</span></div>
                 <div style="color: #00ff88; font-weight: 700; font-size: 16px;">Time: <span id="pauseTime">0s</span></div>
+            </div>
+            
+            <!-- Sound Settings -->
+            <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.15);">
+                <div style="color: rgba(255,255,255,0.9); font-size: 16px; font-weight: 600; margin-bottom: 15px;">🔊 Sound Settings</div>
+                
+                <!-- Sound Toggle -->
+                <button id="soundToggle" onclick="toggleSound()" style="width: 100%; background: linear-gradient(135deg, #9C27B0, #7B1FA2); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 15px; transition: all 0.2s ease;">
+                    🔊 Sound: ON
+                </button>
+                
+                <!-- Volume Slider -->
+                <div style="margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label style="color: rgba(255,255,255,0.8); font-size: 14px;">Volume:</label>
+                        <span id="volumePercent" style="color: #00d4ff; font-weight: 600; font-size: 14px;">30%</span>
+                    </div>
+                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.3" 
+                           oninput="setVolume(this.value)" 
+                           style="width: 100%; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.2); outline: none; cursor: pointer;">
+                </div>
             </div>
         </div>
         

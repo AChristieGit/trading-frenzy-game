@@ -1,0 +1,117 @@
+// ===== SOUND EFFECTS MODULE =====
+// Dependencies: None
+// Exposes: Sound playback and volume control
+
+// Sound enabled state (default ON)
+let soundEnabled = localStorage.getItem('soundEnabled') !== 'false';
+let masterVolume = parseFloat(localStorage.getItem('masterVolume') || '0.3');
+
+// Sound effect library
+const soundEffects = {
+    breach: new Audio('sounds/Breach.wav'),
+    lifeLost: new Audio('sounds/Lifeloss.wav'),
+    gameOver: new Audio('sounds/GameLose.wav'),
+    success: new Audio('sounds/ClearBreach.wav'),
+    powerup: new Audio('sounds/Powerup.wav')
+};
+
+// Preload all sounds and set initial volume
+function initializeSounds() {
+    Object.values(soundEffects).forEach(sound => {
+        sound.preload = 'auto';
+        sound.volume = soundEnabled ? masterVolume : 0;
+    });
+    console.log('Sound system initialized. Enabled:', soundEnabled, 'Volume:', masterVolume);
+}
+
+// Play a sound effect
+function playSound(soundName) {
+    if (!soundEnabled) return;
+    
+    try {
+        const sound = soundEffects[soundName];
+        if (sound) {
+            sound.currentTime = 0; // Reset to start
+            sound.volume = masterVolume;
+            sound.play().catch(e => {
+                // Silent fail - browser may block autoplay
+                console.log('Sound play failed:', e.message);
+            });
+        } else {
+            console.warn('Sound not found:', soundName);
+        }
+    } catch (error) {
+        console.error('Sound error:', error);
+    }
+}
+
+// Toggle sound on/off
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem('soundEnabled', soundEnabled);
+    
+    // Update all sound volumes
+    Object.values(soundEffects).forEach(sound => {
+        sound.volume = soundEnabled ? masterVolume : 0;
+    });
+    
+    // Update UI
+    updateSoundUI();
+    
+    // Play a test sound when enabling
+    if (soundEnabled) {
+        playSound('success');
+    }
+    
+    console.log('Sound', soundEnabled ? 'enabled' : 'disabled');
+}
+
+// Set master volume (0.0 to 1.0)
+function setVolume(volume) {
+    masterVolume = Math.max(0, Math.min(1, parseFloat(volume)));
+    localStorage.setItem('masterVolume', masterVolume);
+    
+    if (soundEnabled) {
+        Object.values(soundEffects).forEach(sound => {
+            sound.volume = masterVolume;
+        });
+    }
+    
+    updateSoundUI();
+    console.log('Volume set to:', (masterVolume * 100).toFixed(0) + '%');
+}
+
+// Update sound UI elements
+function updateSoundUI() {
+    // Update toggle button text
+    const soundToggle = document.getElementById('soundToggle');
+    if (soundToggle) {
+        soundToggle.textContent = soundEnabled ? '🔊 Sound: ON' : '🔇 Sound: OFF';
+    }
+    
+    // Update volume slider value
+    const volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+        volumeSlider.value = masterVolume;
+        volumeSlider.disabled = !soundEnabled;
+    }
+    
+    // Update volume percentage display
+    const volumePercent = document.getElementById('volumePercent');
+    if (volumePercent) {
+        volumePercent.textContent = `${Math.round(masterVolume * 100)}%`;
+    }
+}
+
+// Initialize sounds when module loads
+initializeSounds();
+
+// Export to global scope
+window.soundEffects = soundEffects;
+window.soundEnabled = soundEnabled;
+window.masterVolume = masterVolume;
+window.playSound = playSound;
+window.toggleSound = toggleSound;
+window.setVolume = setVolume;
+window.updateSoundUI = updateSoundUI;
+window.initializeSounds = initializeSounds;

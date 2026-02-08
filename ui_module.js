@@ -277,6 +277,11 @@ function showPauseMenu() {
         btn.className = 'control-btn paused';
     });
     
+    // Update sound UI to show current settings
+    if (typeof updateSoundUI === 'function') {
+        updateSoundUI();
+    }
+    
     // Show pause menu
     safeUpdateStyle('pauseMenuModal', 'display', 'flex');
 }

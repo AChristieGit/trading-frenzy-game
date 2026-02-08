@@ -409,14 +409,50 @@ if (savedGuestProgress && guestData.maxVixSurvived && guestData.maxVixSurvived >
         updateMenuDisplay();
         updateProfileDisplay();
         
-        // Mark as completed at the end
-        accountCreationCompleted = true;
+        // Transfer guest game sessions to database
+        await transferGuestGameSessions();
         
     } catch (error) {
         console.error('Failed to create user profile:', error);
         throw error;
-    } finally {
-        profileCreationInProgress = false;
+    }
+}
+
+// New function to transfer guest game sessions
+async function transferGuestGameSessions() {
+    if (!currentUser || !supabase) return;
+    
+    try {
+        const guestSessions = sessionStorage.getItem('guestGameSessions');
+        if (!guestSessions) {
+            console.log('No guest game sessions to transfer');
+            return;
+        }
+        
+        const sessions = JSON.parse(guestSessions);
+        console.log(`Transferring ${sessions.length} guest game sessions...`);
+        
+        // Add user_id to each session
+        const sessionsToInsert = sessions.map(session => ({
+            ...session,
+            user_id: currentUser.id,
+            created_at: session.timestamp
+        }));
+        
+        // Bulk insert all guest sessions
+        const { error } = await supabase
+            .from('game_sessions')
+            .insert(sessionsToInsert);
+        
+        if (error) {
+            console.error('Failed to transfer guest sessions:', error);
+        } else {
+            console.log('Successfully transferred guest game sessions');
+            // Clear the temporary storage
+            sessionStorage.removeItem('guestGameSessions');
+        }
+    } catch (error) {
+        console.error('Error transferring guest sessions:', error);
     }
 }
 
@@ -869,3 +905,4 @@ window.createUserProfile = createUserProfile;
 window.loadUserProfile = loadUserProfile;
 window.clearAuthMessages = clearAuthMessages;
 window.isAdminUser = isAdminUser;
+window.transferGuestGameSessions = transferGuestGameSessions;

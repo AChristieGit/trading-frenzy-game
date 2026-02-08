@@ -326,13 +326,13 @@ if (!isGuestMode) {
 function endGame(message) {
     
     clearAllIntervals();
-    
+    playSound('gameOver');
     const gameXP = Math.max(0, Math.floor(score / 10));
     const gameCoins = Math.max(0, Math.floor(score / adminSettings.coinRewards.endGameMultiplier));
     const oldLevel = userProfile.level;
     const wasNewBest = score > userProfile.bestScore;
     
-      awardXP(gameXP); // Defined in trading module
+    awardXP(gameXP); // Defined in trading module
     awardCoins(gameCoins); // Defined in trading module
     
     userProfile.gamesPlayed++;
@@ -340,32 +340,50 @@ function endGame(message) {
         userProfile.bestScore = score;
     }
     
-// Update max VIX survived if this session was higher
-if (maxVixSurvived > (userProfile.maxVixSurvived || 10.0)) {
-    userProfile.maxVixSurvived = maxVixSurvived;
-}
+    // Update max VIX survived if this session was higher
+    if (maxVixSurvived > (userProfile.maxVixSurvived || 10.0)) {
+        userProfile.maxVixSurvived = maxVixSurvived;
+    }
     
     if (score > 0) {
         userProfile.wins++;
     }
     
-// Save game session data with error handling
-if (currentUser && !isGuestMode) {
-    try {
-        validateAndRepairUserProfile(); // Ensure data integrity before saving
-        saveGameSession({
-            score: Math.max(0, score),
-            duration: Math.max(0, gameTime),
-            trades: Math.max(0, trades),
-            breaches: Math.max(0, breaches),
-            difficulty: Math.max(1, Math.min(3, gameDifficulty))
-        });
-        saveUserProgress();
-    } catch (error) {
-        console.error('Failed to save game data:', error);
-        // Continue with game over display even if save fails
+    // Save game session data with error handling
+    if (currentUser && !isGuestMode) {
+        try {
+            validateAndRepairUserProfile(); // Ensure data integrity before saving
+            saveGameSession({
+                score: Math.max(0, score),
+                duration: Math.max(0, gameTime),
+                trades: Math.max(0, trades),
+                breaches: Math.max(0, breaches),
+                difficulty: Math.max(1, Math.min(3, gameDifficulty))
+            });
+            saveUserProgress();
+        } catch (error) {
+            console.error('Failed to save game data:', error);
+            // Continue with game over display even if save fails
+        }
+    } else if (isGuestMode) {
+        // Save guest game sessions to sessionStorage for later transfer
+        try {
+            const existingSessions = JSON.parse(sessionStorage.getItem('guestGameSessions') || '[]');
+            existingSessions.push({
+                score: Math.max(0, score),
+                duration: Math.max(0, gameTime),
+                trades: Math.max(0, trades),
+                breaches: Math.max(0, breaches),
+                difficulty: Math.max(1, Math.min(3, gameDifficulty)),
+                max_vix_survived: maxVixSurvived,
+                timestamp: new Date().toISOString()
+            });
+            sessionStorage.setItem('guestGameSessions', JSON.stringify(existingSessions));
+            console.log('Guest game session saved locally. VIX:', maxVixSurvived);
+        } catch (error) {
+            console.error('Failed to save guest session:', error);
+        }
     }
-}
     
        setTimeout(() => {
         showGameOverModal(message, gameXP, gameCoins, oldLevel !== userProfile.level, wasNewBest); // Defined in UI module
